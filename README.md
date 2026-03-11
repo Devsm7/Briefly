@@ -4,8 +4,6 @@
 
 ---
 
----
-
 ## Key Features
 
 - **Personalized feed** — cosine similarity ranking against your interest profile
