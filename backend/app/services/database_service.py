@@ -38,15 +38,17 @@ def insert_survey_preference(user_id, category):
     return preference
 
 
-def insert_article(title, description, url, category, source, published_date):
+def insert_article(title, description, url, category, source, published_date ,imgURL,language):
     db = SessionLocal()
     article = News(
         title=title,
+        image_url=imgURL,
         description=description,
         url=url,
         category=category,
         source=source,
-        published_date=published_date
+        published_date=published_date,
+        language=language,
     )
     db.add(article)
     db.commit()
