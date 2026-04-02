@@ -14,9 +14,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-briefly}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-briefly} -d ${POSTGRES_DB:-briefly_db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,11 +59,18 @@ services:
     container_name: briefly_frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Browser-side requests go through nginx (port 80) which proxies /api/ to backend
+      NEXT_PUBLIC_API_URL: http://localhost
+      # Make Next.js dev server listen on all interfaces inside the container
+      HOSTNAME: 0.0.0.0
     ports:
       - "3000:3000"
     depends_on:
       - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
 
   # ── Nginx Reverse Proxy ────────────────────────────────
   nginx:

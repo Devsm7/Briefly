@@ -1,10 +1,7 @@
-// TODO: Implement the root layout
-// - Import Inter / Outfit font from next/font/google
-// - Set <html lang="en">
-// - Wrap children in a Providers component (auth context, etc.)
-// - Apply global className for dark theme base
-
 import type { Metadata } from "next";
+import { AuthProvider } from "@/components/AuthProvider";
+import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
 
 export const metadata: Metadata = {
     title: "Briefly — Your Personalized News Digest",
@@ -12,15 +9,13 @@ export const metadata: Metadata = {
         "AI-powered personalized news platform that learns your interests and delivers smart briefings.",
 };
 
-export default function RootLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    // TODO: implement
+export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body className="min-h-screen antialiased">
+                <AuthProvider>{children}</AuthProvider>
+                <Toaster />
+            </body>
         </html>
     );
 }

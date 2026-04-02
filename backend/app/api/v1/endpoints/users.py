@@ -1,18 +1,30 @@
 """User profile endpoints."""
 
-# TODO: Import APIRouter, Depends from fastapi
-# TODO: Import get_current_user, get_db from app.api.deps
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
-router = None  # TODO: router = APIRouter(prefix="/users", tags=["users"])
+from app.api.deps import get_current_user, get_db
+from app.models.user import User
+from app.schemas.user import UserOut, UserUpdate
+
+router = APIRouter(prefix="/users", tags=["users"])
 
 
-def get_me():
+@router.get("/me", response_model=UserOut)
+def get_me(current_user: User = Depends(get_current_user)):
     """GET /users/me — Return the current authenticated user's profile."""
-    # TODO: return current_user mapped to UserOut
-    raise NotImplementedError
+    return current_user
 
 
-def update_me():
-    """PATCH /users/me — Update full_name or other profile fields."""
-    # TODO: apply UserUpdate payload to current_user; commit; return UserOut
-    raise NotImplementedError
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """PATCH /users/me — Update profile fields."""
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    db.commit()
+    db.refresh(current_user)
+    return current_user
