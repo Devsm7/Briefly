@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Briefly"
     DEBUG: bool = False
 
-    DATABASE_URL: str = "postgresql://briefly:briefly_secret@localhost:5432/briefly_db"
+    DATABASE_URL: str = ""
 
     SECRET_KEY: str = "change-me-to-a-long-random-secret-key-in-production"
     ALGORITHM: str = "HS256"

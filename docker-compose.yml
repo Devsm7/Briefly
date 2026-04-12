@@ -1,35 +1,4 @@
-version: "3.9"
-
 services:
-  # ── PostgreSQL ──────────────────────────────────────────
-  db:
-    image: postgres:16-alpine
-    container_name: briefly_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-briefly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-briefly_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-briefly_db}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-briefly} -d ${POSTGRES_DB:-briefly_db}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── Ollama (Mistral 7B) ─────────────────────────────────
-  ollama:
-    image: ollama/ollama:latest
-    container_name: briefly_ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
 
   # ── Backend (FastAPI) ──────────────────────────────────
   backend:
@@ -39,14 +8,6 @@ services:
     container_name: briefly_backend
     restart: unless-stopped
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-briefly}:${POSTGRES_PASSWORD:-briefly_secret}@db:5432/${POSTGRES_DB:-briefly_db}
-      OLLAMA_BASE_URL: http://ollama:11434
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
       - ./backend:/app
       - model_cache:/app/.cache
@@ -59,18 +20,12 @@ services:
     container_name: briefly_frontend
     restart: unless-stopped
     environment:
-      # Browser-side requests go through nginx (port 80) which proxies /api/ to backend
       NEXT_PUBLIC_API_URL: http://localhost
-      # Make Next.js dev server listen on all interfaces inside the container
       HOSTNAME: 0.0.0.0
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
 
   # ── Nginx Reverse Proxy ────────────────────────────────
   nginx:
@@ -86,6 +41,4 @@ services:
       - frontend
 
 volumes:
-  postgres_data:
-  ollama_data:
   model_cache:

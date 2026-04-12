@@ -4,10 +4,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
-from app.db.session import engine
-from app.db.base import Base
-import app.models.user    # noqa: F401 — registers User with Base metadata
-import app.models.survey  # noqa: F401 — registers SurveyPreference with Base metadata
 
 app = FastAPI(title="Briefly", version="1.0.0")
 
@@ -23,11 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=engine)
 
 
 app.include_router(api_router, prefix="/api/v1")

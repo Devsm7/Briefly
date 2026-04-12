@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text
-from modell.user import Base
+
+from app.db.base import Base
+
 
 class News(Base):
     __tablename__ = "news"
@@ -11,3 +13,5 @@ class News(Base):
     category = Column(String)
     source = Column(String)
     published_date = Column(String)
+    image_url = Column(String, nullable=True)
+    language = Column(String, nullable=True)

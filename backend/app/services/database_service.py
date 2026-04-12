@@ -1,17 +1,10 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from modell.user import Base, User
-from modell.survey_preference import SurveyPreference
-from modell.news import News
-from modell.user_interaction import UserInteraction
-from modell.saved_article import SavedArticle
-
-
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefly_db"
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from app.db.base import Base
+from app.db.session import SessionLocal, engine
+from app.models.news import News
+from app.models.saved_article import SavedArticle
+from app.models.survey import SurveyPreference
+from app.models.user import User
+from app.models.user_interaction import UserInteraction
 
 
 def create_tables():
@@ -38,7 +31,7 @@ def insert_survey_preference(user_id, category):
     return preference
 
 
-def insert_article(title, description, url, category, source, published_date ,imgURL,language):
+def insert_article(title, description, url, category, source, published_date, imgURL, language):
     db = SessionLocal()
     article = News(
         title=title,
@@ -69,7 +62,7 @@ def log_interaction(user_id, article_id, interaction_type):
     interaction = UserInteraction(
         user_id=user_id,
         article_id=article_id,
-        interaction_type=interaction_type
+        action=interaction_type,
     )
     db.add(interaction)
     db.commit()

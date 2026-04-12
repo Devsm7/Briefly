@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { categorySections, generalQuestions } from "@/lib/surveyQuestions";
 import SurveyProgress from "@/components/survey/SurveyProgress";
 import SurveyStep from "@/components/survey/SurveyStep";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import type { AxiosError } from "axios";
 
 const CATEGORIES = [
