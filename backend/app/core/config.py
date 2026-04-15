@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
 
     NEWS_API_KEY: str = ""
+    NEWSDATA_API_KEY: str = ""
+    NEWSDATA_BASE_URL: str = "https://newsdata.io/api/1"
     SCRAPE_INTERVAL_HOURS: int = 6
 
     model_config = {"env_file": str(_ENV_FILE), "extra": "ignore"}
