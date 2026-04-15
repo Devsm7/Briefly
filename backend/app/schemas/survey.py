@@ -1,20 +1,34 @@
 """Pydantic schemas for onboarding survey."""
 
-# TODO: Import BaseModel from pydantic
-# TODO: Import Optional, List, Dict, datetime
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, field_validator
 
 
-class SurveyCreate:
-    """Payload for POST /survey."""
-    # TODO: categories: List[str]   e.g. ["tech", "business"]
-    # TODO: frequency: Optional[str] = None
-    # TODO: preferred_sources: Optional[List[str]] = []
-    pass
+class SurveySubmit(BaseModel):
+    """Payload for POST /survey — full survey submission."""
+    categories: List[str]
+    answers: Dict[str, Any]
+
+    @field_validator("categories")
+    @classmethod
+    def categories_valid(cls, v: List[str]) -> List[str]:
+        allowed = {"tech", "politics", "sport"}
+        invalid = [c for c in v if c not in allowed]
+        if invalid:
+            raise ValueError(f"Invalid categories: {invalid}. Allowed: {allowed}")
+        return v
 
 
-class SurveyOut:
-    """Survey preference as returned by GET /survey."""
-    # TODO: id, user_id, categories, frequency, preferred_sources,
-    #       interest_vector, survey_completed, created_at
-    # TODO: model_config = {"from_attributes": True}
-    pass
+class SurveyOut(BaseModel):
+    """Survey preference as returned by the API."""
+    id: int
+    user_id: int
+    categories: List[str]
+    answers: Dict[str, Any]
+    interest_vector: Dict[str, float]
+    survey_completed: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

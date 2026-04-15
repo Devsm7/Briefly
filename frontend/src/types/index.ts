@@ -4,8 +4,10 @@
 
 export interface User {
     id: number;
-    email: string;
-    full_name?: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+    gender?: string;
     is_active: boolean;
     created_at: string;
 }

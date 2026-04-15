@@ -1,33 +1,47 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from app.models.article import Base, Article
-from app.models.user_interest_profile import UserInterestProfile
-
-
-DATABASE_URL = "postgresql://neondb_owner:npg_LINU7mylfe8w@ep-wandering-frost-an5bxlnm-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=requir"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from app.db.base import Base
+from app.db.session import SessionLocal, engine
+from app.models.news import News
+from app.models.saved_article import SavedArticle
+from app.models.survey import SurveyPreference
+from app.models.user import User
+from app.models.user_interaction import UserInteraction
 
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
 
-def insert_article(title, preview=None, cover_image=None, published_at=None,
-                   content=None, source=None, keywords=None,
-                   category=None, author=None):
+def insert_user(email, password):
     db = SessionLocal()
-    article = Article(
+    user = User(email=email, password=password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    db.close()
+    return user
+
+
+def insert_survey_preference(user_id, category):
+    db = SessionLocal()
+    preference = SurveyPreference(user_id=user_id, category=category)
+    db.add(preference)
+    db.commit()
+    db.refresh(preference)
+    db.close()
+    return preference
+
+
+def insert_article(title, description, url, category, source, published_date, imgURL, language):
+    db = SessionLocal()
+    article = News(
         title=title,
-        preview=preview,
-        cover_image=cover_image,
-        published_at=published_at,
-        content=content,
-        source=source,
-        keywords=keywords or [],
+        image_url=imgURL,
+        description=description,
+        url=url,
         category=category,
-        author=author
+        source=source,
+        published_date=published_date,
+        language=language,
     )
     db.add(article)
     db.commit()
@@ -36,69 +50,25 @@ def insert_article(title, preview=None, cover_image=None, published_at=None,
     return article
 
 
-def get_articles():
+def get_news():
     db = SessionLocal()
-    articles = db.query(Article).all()
+    articles = db.query(News).all()
     db.close()
     return articles
 
 
-def get_article_by_id(article_id):
+def log_interaction(user_id, article_id, interaction_type):
     db = SessionLocal()
-    article = db.query(Article).filter(Article.id == article_id).first()
-    db.close()
-    return article
-
-
-def insert_user_interest_profile(user_identifier, saved_articles=None,
-                                 interests_based_on_interaction=None, keywords=None):
-    db = SessionLocal()
-    profile = UserInterestProfile(
-        user_identifier=user_identifier,
-        saved_articles=saved_articles or [],
-        interests_based_on_interaction=interests_based_on_interaction or [],
-        keywords=keywords or []
+    interaction = UserInteraction(
+        user_id=user_id,
+        article_id=article_id,
+        action=interaction_type,
     )
-    db.add(profile)
+    db.add(interaction)
     db.commit()
-    db.refresh(profile)
+    db.refresh(interaction)
     db.close()
-    return profile
-
-
-def get_user_interest_profile(user_identifier):
-    db = SessionLocal()
-    profile = db.query(UserInterestProfile).filter(
-        UserInterestProfile.user_identifier == user_identifier
-    ).first()
-    db.close()
-    return profile
-
-
-def update_user_interest_profile(user_identifier, saved_articles=None,
-                                 interests_based_on_interaction=None, keywords=None):
-    db = SessionLocal()
-    profile = db.query(UserInterestProfile).filter(
-        UserInterestProfile.user_identifier == user_identifier
-    ).first()
-
-    if not profile:
-        db.close()
-        return None
-
-    if saved_articles is not None:
-        profile.saved_articles = saved_articles
-
-    if interests_based_on_interaction is not None:
-        profile.interests_based_on_interaction = interests_based_on_interaction
-
-    if keywords is not None:
-        profile.keywords = keywords
-
-    db.commit()
-    db.refresh(profile)
-    db.close()
-    return profile
+    return interaction
 
 
 if __name__ == "__main__":

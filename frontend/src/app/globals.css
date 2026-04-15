@@ -1,27 +1,3 @@
-/* ─── Briefly Global Styles ─────────────────────────────────────────────── */
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* TODO: Import Google Fonts (Inter / Outfit) */
-/* TODO: Define CSS custom properties (design tokens):
-    --color-bg:        #0a0a0f
-    --color-surface:   #12121a
-    --color-card:      #1a1a2e
-    --color-primary:   #6366f1
-    --color-accent:    #8b5cf6
-    --color-text:      #e2e8f0
-    --color-muted:     #64748b
-*/
-/* TODO: Set body background, font-family, color defaults */
-/* TODO: Add smooth scrolling, box-sizing border-box globally */
-/* TODO: Define category color badge classes:
-    .badge-tech       { }
-    .badge-business   { }
-    .badge-politics   { }
-    .badge-sports     { }
-*/
-/* TODO: Add glassmorphism utility:
-    .glass { backdrop-filter: blur(12px); background: rgba(255,255,255,0.05); }
-*/
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
