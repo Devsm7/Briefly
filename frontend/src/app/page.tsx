@@ -14,21 +14,20 @@ export default function LoginPage() {
     const { login } = useAuth();
     const router = useRouter();
 
-    const [identifier, setIdentifier] = useState("");
-    const [password, setPassword] = useState("");
+    const [username, setUsername] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
-        if (!identifier.trim() || !password) {
-            setError("Please fill in all fields.");
+        if (!username.trim()) {
+            setError("Please enter your username.");
             return;
         }
         setIsLoading(true);
         try {
-            await login(identifier.trim(), password);
+            await login(username.trim());
             router.push("/dashboard");
         } catch (err) {
             const axiosErr = err as AxiosError<{ detail: string }>;
@@ -50,25 +49,14 @@ export default function LoginPage() {
                 <CardContent>
                     <form onSubmit={handleSubmit} noValidate className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="identifier">Email or Username</Label>
+                            <Label htmlFor="username">Username</Label>
                             <Input
-                                id="identifier"
+                                id="username"
                                 type="text"
-                                placeholder="you@example.com or username"
-                                value={identifier}
-                                onChange={(e) => setIdentifier(e.target.value)}
+                                placeholder="Enter your username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 autoComplete="username"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="current-password"
                             />
                         </div>
 

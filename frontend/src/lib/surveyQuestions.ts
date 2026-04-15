@@ -16,47 +16,6 @@ export interface SurveySection {
     questions: Question[];
 }
 
-// ── General & Onboarding ─────────────────────────────────────────────────────
-
-export const generalQuestions: Question[] = [
-    {
-        id: "Q01",
-        text: "How often do you read news or articles online?",
-        type: "single",
-        options: [
-            { label: "Multiple times a day", value: "multiple_daily" },
-            { label: "Once a day", value: "once_daily" },
-            { label: "A few times a week", value: "few_weekly" },
-            { label: "Once a week", value: "once_weekly" },
-            { label: "Rarely", value: "rarely" },
-        ],
-    },
-    {
-        id: "Q02",
-        text: "What is your preferred content format?",
-        type: "multi",
-        options: [
-            { label: "Short articles", value: "short_articles" },
-            { label: "Long reads", value: "long_reads" },
-            { label: "Videos", value: "videos" },
-            { label: "Podcasts", value: "podcasts" },
-            { label: "Newsletters", value: "newsletters" },
-            { label: "Social media posts", value: "social_media" },
-        ],
-    },
-    {
-        id: "Q03",
-        text: "What time of day do you usually consume news?",
-        type: "multi",
-        options: [
-            { label: "Morning (6am–12pm)", value: "morning" },
-            { label: "Afternoon (12pm–6pm)", value: "afternoon" },
-            { label: "Evening (6pm–10pm)", value: "evening" },
-            { label: "Late night (10pm+)", value: "late_night" },
-        ],
-    },
-];
-
 // ── Category Sections ─────────────────────────────────────────────────────────
 
 export const categorySections: SurveySection[] = [
@@ -83,17 +42,6 @@ export const categorySections: SurveySection[] = [
                 text: "How would you rate your interest in technology news overall?",
                 type: "likert",
             },
-            {
-                id: "Q06",
-                text: "What best describes your relationship with technology?",
-                type: "single",
-                options: [
-                    { label: "Tech professional / developer", value: "professional" },
-                    { label: "Tech enthusiast / early adopter", value: "enthusiast" },
-                    { label: "Casual user", value: "casual" },
-                    { label: "Skeptic / minimal user", value: "skeptic" },
-                ],
-            },
         ],
     },
     {
@@ -118,17 +66,6 @@ export const categorySections: SurveySection[] = [
                 id: "Q08",
                 text: "How would you rate your interest in political news overall?",
                 type: "likert",
-            },
-            {
-                id: "Q09",
-                text: "Which geographic scope of political news matters most to you?",
-                type: "rank",
-                options: [
-                    { label: "Local", value: "local" },
-                    { label: "National", value: "national" },
-                    { label: "Regional", value: "regional" },
-                    { label: "Global", value: "global" },
-                ],
             },
         ],
     },
@@ -156,18 +93,6 @@ export const categorySections: SurveySection[] = [
                 id: "Q14",
                 text: "How would you rate your interest in sports news overall?",
                 type: "likert",
-            },
-            {
-                id: "Q15",
-                text: "What type of sports content do you prefer?",
-                type: "multi",
-                options: [
-                    { label: "Match results & scores", value: "results" },
-                    { label: "Transfer news", value: "transfers" },
-                    { label: "Analysis & tactics", value: "analysis" },
-                    { label: "Player interviews", value: "interviews" },
-                    { label: "Statistics & data", value: "statistics" },
-                ],
             },
         ],
     },

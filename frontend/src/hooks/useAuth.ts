@@ -7,12 +7,12 @@ export interface AuthContextValue {
     user: User | null;
     isLoading: boolean;
     error: string | null;
-    login: (identifier: string, password: string) => Promise<void>;
+    login: (username: string) => Promise<void>;
     register: (
-        email: string,
         username: string,
-        password: string,
-        fullName?: string
+        firstName: string,
+        lastName: string,
+        gender: string
     ) => Promise<void>;
     logout: () => void;
 }

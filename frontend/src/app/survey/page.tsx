@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { categorySections, generalQuestions } from "@/lib/surveyQuestions";
+import { categorySections } from "@/lib/surveyQuestions";
 import SurveyProgress from "@/components/survey/SurveyProgress";
 import SurveyStep from "@/components/survey/SurveyStep";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,8 @@ export default function SurveyPage() {
     const [error, setError] = useState<string | null>(null);
 
     const categorySteps = categorySections.filter((s) => selectedCategories.includes(s.id));
-    const totalSteps = 2 + categorySteps.length;
+    const totalSteps = 1 + categorySteps.length;
     const stepLabels = [
-        "General",
         "Your Interests",
         ...categorySteps.map((s) => s.label),
     ];
@@ -82,9 +81,9 @@ export default function SurveyPage() {
         }
     }
 
+    const isCategoryStep = step === 0;
+    const currentSection = step >= 1 ? categorySteps[step - 1] : null;
     const isLastStep = step === totalSteps - 1;
-    const isCategoryStep = step === 1;
-    const currentSection = step >= 2 ? categorySteps[step - 2] : null;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-100 p-4">
@@ -103,18 +102,7 @@ export default function SurveyPage() {
 
                 <CardContent className="flex flex-col gap-6">
 
-                    {/* Step 0 — General questions */}
-                    {step === 0 && (
-                        <SurveyStep
-                            sectionLabel="General & Onboarding"
-                            sectionColor="text-muted-foreground"
-                            questions={generalQuestions}
-                            answers={answers}
-                            onChange={handleAnswer}
-                        />
-                    )}
-
-                    {/* Step 1 — Category selection */}
+                    {/* Step 0 — Category selection */}
                     {isCategoryStep && (
                         <div className="flex flex-col gap-4">
                             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -152,7 +140,7 @@ export default function SurveyPage() {
                         </div>
                     )}
 
-                    {/* Steps 2+ — Category-specific questions */}
+                    {/* Steps 1+ — Category-specific questions */}
                     {currentSection && (
                         <SurveyStep
                             sectionLabel={currentSection.label}

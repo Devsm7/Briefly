@@ -23,8 +23,12 @@ def update_me(
     current_user: User = Depends(get_current_user),
 ):
     """PATCH /users/me — Update profile fields."""
-    if payload.full_name is not None:
-        current_user.full_name = payload.full_name
+    if payload.first_name is not None:
+        current_user.first_name = payload.first_name
+    if payload.last_name is not None:
+        current_user.last_name = payload.last_name
+    if payload.gender is not None:
+        current_user.gender = payload.gender
     db.commit()
     db.refresh(current_user)
     return current_user

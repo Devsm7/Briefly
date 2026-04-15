@@ -11,30 +11,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { AxiosError } from "axios";
 
 interface FieldErrors {
-    email?: string;
     username?: string;
-    password?: string;
+    firstName?: string;
+    lastName?: string;
 }
 
 export default function RegisterPage() {
     const { register } = useAuth();
     const router = useRouter();
 
-    const [email, setEmail] = useState("");
     const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [fullName, setFullName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [gender, setGender] = useState<"male" | "female">("male");
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [apiError, setApiError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     function validate(): boolean {
         const errors: FieldErrors = {};
-        if (!email.trim()) {
-            errors.email = "Email is required";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            errors.email = "Enter a valid email address";
-        }
         if (!username.trim()) {
             errors.username = "Username is required";
         } else if (username.length < 3) {
@@ -42,10 +37,11 @@ export default function RegisterPage() {
         } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
             errors.username = "Letters, numbers, and underscores only";
         }
-        if (!password) {
-            errors.password = "Password is required";
-        } else if (password.length < 8) {
-            errors.password = "Password must be at least 8 characters";
+        if (!firstName.trim()) {
+            errors.firstName = "First name is required";
+        }
+        if (!lastName.trim()) {
+            errors.lastName = "Last name is required";
         }
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
@@ -57,7 +53,7 @@ export default function RegisterPage() {
         if (!validate()) return;
         setIsLoading(true);
         try {
-            await register(email.trim(), username.trim(), password, fullName.trim() || undefined);
+            await register(username.trim(), firstName.trim(), lastName.trim(), gender);
             router.push("/survey");
         } catch (err) {
             const axiosErr = err as AxiosError<{ detail: string }>;
@@ -79,34 +75,6 @@ export default function RegisterPage() {
                 <CardContent>
                     <form onSubmit={handleSubmit} noValidate className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="full_name">Full Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                            <Input
-                                id="full_name"
-                                type="text"
-                                placeholder="Jane Doe"
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
-                                autoComplete="name"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                autoComplete="email"
-                                aria-invalid={!!fieldErrors.email}
-                            />
-                            {fieldErrors.email && (
-                                <p className="text-xs text-destructive">{fieldErrors.email}</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
                             <Label htmlFor="username">Username</Label>
                             <Input
                                 id="username"
@@ -123,19 +91,63 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="first_name">First Name</Label>
                             <Input
-                                id="password"
-                                type="password"
-                                placeholder="Min. 8 characters"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="new-password"
-                                aria-invalid={!!fieldErrors.password}
+                                id="first_name"
+                                type="text"
+                                placeholder="Jane"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                autoComplete="given-name"
+                                aria-invalid={!!fieldErrors.firstName}
                             />
-                            {fieldErrors.password && (
-                                <p className="text-xs text-destructive">{fieldErrors.password}</p>
+                            {fieldErrors.firstName && (
+                                <p className="text-xs text-destructive">{fieldErrors.firstName}</p>
                             )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="last_name">Last Name</Label>
+                            <Input
+                                id="last_name"
+                                type="text"
+                                placeholder="Doe"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                autoComplete="family-name"
+                                aria-invalid={!!fieldErrors.lastName}
+                            />
+                            {fieldErrors.lastName && (
+                                <p className="text-xs text-destructive">{fieldErrors.lastName}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Gender</Label>
+                            <div className="flex gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="gender"
+                                        value="male"
+                                        checked={gender === "male"}
+                                        onChange={() => setGender("male")}
+                                        className="accent-primary h-4 w-4"
+                                    />
+                                    <span className="text-sm">Male</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="gender"
+                                        value="female"
+                                        checked={gender === "female"}
+                                        onChange={() => setGender("female")}
+                                        className="accent-primary h-4 w-4"
+                                    />
+                                    <span className="text-sm">Female</span>
+                                </label>
+                            </div>
                         </div>
 
                         {apiError && (

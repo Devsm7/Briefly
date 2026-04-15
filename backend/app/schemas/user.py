@@ -4,15 +4,15 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 
 
 class UserCreate(BaseModel):
     """Payload for POST /auth/register."""
-    email: EmailStr
     username: str
-    password: str
-    full_name: Optional[str] = None
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -26,30 +26,28 @@ class UserCreate(BaseModel):
             raise ValueError("Username may only contain letters, numbers, and underscores")
         return v
 
-    @field_validator("full_name")
+    @field_validator("gender")
     @classmethod
-    def full_name_valid(cls, v: Optional[str]) -> Optional[str]:
+    def gender_valid(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
-            v = v.strip()
-            if len(v) > 100:
-                raise ValueError("Full name must be at most 100 characters")
-            if len(v) == 0:
-                return None
+            v = v.strip().lower()
+            if v not in ("male", "female"):
+                raise ValueError("Gender must be 'male' or 'female'")
         return v
 
 
 class UserLogin(BaseModel):
-    """Payload for POST /auth/login. Accepts email or username as identifier."""
-    identifier: str
-    password: str
+    """Payload for POST /auth/login. Username only."""
+    username: str
 
 
 class UserOut(BaseModel):
     """Public user representation returned by the API."""
     id: int
-    email: str
     username: str
-    full_name: Optional[str] = None
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
     is_active: bool
     created_at: datetime
 
@@ -62,17 +60,8 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-class PasswordResetRequest(BaseModel):
-    """Payload for POST /auth/reset-password."""
-    email: EmailStr
-
-
-class PasswordResetConfirm(BaseModel):
-    """Payload for POST /auth/reset-password/confirm."""
-    token: str
-    new_password: str
-
-
 class UserUpdate(BaseModel):
     """Payload for PATCH /users/me."""
-    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None

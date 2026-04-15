@@ -23,11 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .finally(() => setIsLoading(false));
     }, []);
 
-    const login = useCallback(async (identifier: string, password: string) => {
+    const login = useCallback(async (username: string) => {
         setError(null);
         const res = await api.post<{ access_token: string }>("/api/v1/auth/login", {
-            identifier,
-            password,
+            username,
         });
         saveToken(res.data.access_token);
         const me = await api.get<User>("/api/v1/users/me");
@@ -35,15 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const register = useCallback(
-        async (email: string, username: string, password: string, fullName?: string) => {
+        async (username: string, firstName: string, lastName: string, gender: string) => {
             setError(null);
             await api.post("/api/v1/auth/register", {
-                email,
                 username,
-                password,
-                full_name: fullName || null,
+                first_name: firstName,
+                last_name: lastName,
+                gender,
             });
-            await login(username, password);
+            await login(username);
         },
         [login]
     );
