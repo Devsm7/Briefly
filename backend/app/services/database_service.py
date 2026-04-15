@@ -1,10 +1,10 @@
-from app.db.base import Base
-from app.db.session import SessionLocal, engine
-from app.models.news import News
-from app.models.saved_article import SavedArticle
-from app.models.survey import SurveyPreference
-from app.models.user import User
-from app.models.user_interaction import UserInteraction
+from ..db.base import Base
+from ..db.session import SessionLocal, engine
+from ..models.article import Article as News
+from ..models.saved_article import SavedArticle
+from ..models.survey import SurveyPreference
+from ..models.user import User
+from ..models.user_interaction import UserInteraction
 
 
 def create_tables():

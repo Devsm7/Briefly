@@ -1,6 +1,11 @@
 import streamlit as st
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
+import streamlit as st
+from backend.app.services.database_service import get_news
 st.set_page_config(layout="wide")
 
 def sidebar():
@@ -26,7 +31,7 @@ def news_grid(articles, num_columns=3):
         column_index = i % num_columns
         with columns[column_index]:
             article_card(article)
-#temp
+'''temp
 def get_mock_articles() :
     articles = [
         {
@@ -65,11 +70,13 @@ def get_mock_articles() :
     ]
 
     return articles
+'''
 
 def for_you_page():
     sidebar()
     st.markdown("# For you page<br>", unsafe_allow_html=True)
+    articles = get_news() 
 
-    articles = get_mock_articles()#temp
+    #articles = get_mock_articles()#temp
     news_grid(articles)
 for_you_page()
