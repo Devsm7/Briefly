@@ -1,52 +1,67 @@
 """Pydantic schemas for User — request bodies and response shapes."""
 
-# TODO: Import BaseModel, EmailStr from pydantic
-# TODO: Import Optional, datetime from typing / datetime
+import re
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, field_validator
 
 
-class UserCreate:
+class UserCreate(BaseModel):
     """Payload for POST /auth/register."""
-    # TODO: email: EmailStr
-    # TODO: password: str
-    # TODO: full_name: Optional[str] = None
-    pass
+    username: str
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def username_valid(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters")
+        if len(v) > 50:
+            raise ValueError("Username must be at most 50 characters")
+        if not re.match(r"^[a-zA-Z0-9_]+$", v):
+            raise ValueError("Username may only contain letters, numbers, and underscores")
+        return v
+
+    @field_validator("gender")
+    @classmethod
+    def gender_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip().lower()
+            if v not in ("male", "female"):
+                raise ValueError("Gender must be 'male' or 'female'")
+        return v
 
 
-class UserLogin:
-    """Payload for POST /auth/login."""
-    # TODO: email: EmailStr
-    # TODO: password: str
-    pass
+class UserLogin(BaseModel):
+    """Payload for POST /auth/login. Username only."""
+    username: str
 
 
-class UserOut:
+class UserOut(BaseModel):
     """Public user representation returned by the API."""
-    # TODO: id, email, full_name, is_active, created_at
-    # TODO: model_config = {"from_attributes": True}
-    pass
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
-class Token:
+class Token(BaseModel):
     """JWT token response."""
-    # TODO: access_token: str
-    # TODO: token_type: str = "bearer"
-    pass
+    access_token: str
+    token_type: str = "bearer"
 
 
-class PasswordResetRequest:
-    """Payload for POST /auth/reset-password."""
-    # TODO: email: EmailStr
-    pass
-
-
-class PasswordResetConfirm:
-    """Payload for POST /auth/reset-password/confirm."""
-    # TODO: token: str
-    # TODO: new_password: str
-    pass
-
-
-class UserUpdate:
+class UserUpdate(BaseModel):
     """Payload for PATCH /users/me."""
-    # TODO: full_name: Optional[str] = None
-    pass
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None

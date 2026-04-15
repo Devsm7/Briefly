@@ -3,21 +3,17 @@
 const TOKEN_KEY = "briefly_token";
 
 export function saveToken(token: string): void {
-    // TODO: localStorage.setItem(TOKEN_KEY, token)
-    throw new Error("Not implemented");
+    localStorage.setItem(TOKEN_KEY, token);
 }
 
 export function getToken(): string | null {
-    // TODO: return localStorage.getItem(TOKEN_KEY)
-    throw new Error("Not implemented");
+    return localStorage.getItem(TOKEN_KEY);
 }
 
 export function clearToken(): void {
-    // TODO: localStorage.removeItem(TOKEN_KEY)
-    throw new Error("Not implemented");
+    localStorage.removeItem(TOKEN_KEY);
 }
 
 export function isAuthenticated(): boolean {
-    // TODO: return !!getToken()
-    throw new Error("Not implemented");
+    return !!getToken();
 }

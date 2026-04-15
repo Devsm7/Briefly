@@ -1,24 +1,30 @@
-// SurveyProgress — horizontal step progress bar for the onboarding survey
-
 interface SurveyProgressProps {
-    currentStep: number; // 1-based
+    currentStep: number;
     totalSteps: number;
+    stepLabels: string[];
 }
 
-export default function SurveyProgress({
-    currentStep,
-    totalSteps,
-}: SurveyProgressProps) {
-    // TODO: Render a segmented progress bar or numbered steps row
-    // TODO: Completed steps → filled primary color
-    // TODO: Current step → active highlight
-    // TODO: Future steps → muted/gray
-    // TODO: Show "Step N of M" label
-
+export default function SurveyProgress({ currentStep, totalSteps, stepLabels }: SurveyProgressProps) {
     return (
-        <div>
-            {/* TODO: implement */}
-            <span>{currentStep} / {totalSteps}</span>
+        <div className="w-full">
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{stepLabels[currentStep] ?? "Survey"}</span>
+                <span>Step {currentStep + 1} of {totalSteps}</span>
+            </div>
+            <div className="flex gap-1">
+                {Array.from({ length: totalSteps }).map((_, i) => (
+                    <div
+                        key={i}
+                        className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                            i < currentStep
+                                ? "bg-primary"
+                                : i === currentStep
+                                ? "bg-primary/60"
+                                : "bg-muted"
+                        }`}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

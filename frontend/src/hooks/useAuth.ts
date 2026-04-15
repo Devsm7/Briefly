@@ -1,30 +1,26 @@
 "use client";
 
-// useAuth — authentication state and actions (login, register, logout)
-
-// TODO: Import createContext, useContext, useState from react
-// TODO: Import api client from @/lib/api
-// TODO: Import auth helpers from @/lib/auth (save/clear token)
-
-export interface AuthUser {
-    id: number;
-    email: string;
-    full_name?: string;
-}
+import { createContext, useContext } from "react";
+import type { User } from "@/types";
 
 export interface AuthContextValue {
-    user: AuthUser | null;
+    user: User | null;
     isLoading: boolean;
     error: string | null;
-    login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, fullName?: string) => Promise<void>;
+    login: (username: string) => Promise<void>;
+    register: (
+        username: string,
+        firstName: string,
+        lastName: string,
+        gender: string
+    ) => Promise<void>;
     logout: () => void;
 }
 
-// TODO: export const AuthContext = createContext<AuthContextValue>(...)
-// TODO: export function AuthProvider({ children }: ...) { ... }
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function useAuth(): AuthContextValue {
-    // TODO: return useContext(AuthContext)
-    throw new Error("useAuth must be used within an <AuthProvider>");
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within an <AuthProvider>");
+    return ctx;
 }

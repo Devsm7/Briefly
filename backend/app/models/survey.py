@@ -1,32 +1,37 @@
 """SurveyPreference ORM model — maps to the `survey_preferences` table."""
 
-# TODO: Import Column types, ForeignKey, relationship, func from sqlalchemy
-# TODO: Import Base from app.db.base
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
 
 
-class SurveyPreference:
-    """
-    Stores onboarding survey answers and derived interest vector.
+class SurveyPreference(Base):
+    __tablename__ = "survey_preferences"
 
-    Table: survey_preferences
-    Columns:
-        id                - primary key
-        user_id           - FK → users.id (unique: one survey per user)
-        categories        - JSON list of selected categories
-                           e.g. ["tech", "business"]
-        frequency         - preferred reading frequency
-                           "morning" | "evening" | "both" | "realtime"
-        preferred_sources - JSON list of preferred publisher names
-        interest_vector   - JSON dict of category → weight floats
-                           e.g. {"tech": 0.6, "business": 0.4}
-        survey_completed  - 0 = skipped/partial, 1 = completed
-        created_at        - server default now()
-        updated_at        - auto-updated on change
-    Relationships:
-        user - many-to-one → User
-    """
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
 
-    # TODO: Add __tablename__ = "survey_preferences"
-    # TODO: Define all Column fields
-    # TODO: Define relationship back to User
-    pass
+    # Selected categories e.g. ["tech", "politics", "sport"]
+    categories: Mapped[list] = mapped_column(JSONB, default=list, nullable=False, server_default="[]")
+
+    # All question answers e.g. {"Q01": "daily", "Q05": 4, "Q02": ["articles"]}
+    answers: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False, server_default="{}")
+
+    # Derived weights for recommendation engine e.g. {"tech": 0.8, "politics": 0.6}
+    interest_vector: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False, server_default="{}")
+
+    # 0 = skipped / partial, 1 = completed
+    survey_completed: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now(), nullable=True
+    )
+
+    user = relationship("User", back_populates="survey")
