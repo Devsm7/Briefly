@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from ..db.base import Base
 
 
 class SurveyPreference(Base):
@@ -34,4 +34,4 @@ class SurveyPreference(Base):
         DateTime(timezone=True), onupdate=func.now(), nullable=True
     )
 
-    user = relationship("User", back_populates="survey")
+    #user = relationship("User", back_populates="survey")

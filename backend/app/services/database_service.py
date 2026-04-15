@@ -1,10 +1,11 @@
 from ..db.base import Base
 from ..db.session import SessionLocal, engine
 from ..models.article import Article as News
-from ..models.saved_article import SavedArticle
+from ....frontend.src.interfaces.pages.saved_articles_page import SavedArticle
 from ..models.survey import SurveyPreference
 from ..models.user import User
 from ..models.user_interaction import UserInteraction
+from ..models import *
 
 
 def create_tables():
@@ -52,10 +53,25 @@ def insert_article(title, description, url, category, source, published_date, im
 
 def get_news():
     db = SessionLocal()
-    articles = db.query(News).all()
-    db.close()
-    return articles
-
+    try:
+        articles = db.query(News).all()
+        return [
+            {
+                "article_id": article.article_id,
+                "title": article.title,
+                "preview": article.description,
+                "cover_image": article.image_url,
+                "date": article.published_date,
+                "content": article.content,
+                "source": article.source,
+                "url": article.url,
+                "category": article.category,
+                "author": article.author,
+            }
+            for article in articles
+        ]
+    finally:
+        db.close()
 
 def log_interaction(user_id, article_id, interaction_type):
     db = SessionLocal()

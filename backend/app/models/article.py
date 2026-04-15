@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import ARRAY
-from app.db.base import Base
+from ..db.base import Base
 
 
 class Article(Base):

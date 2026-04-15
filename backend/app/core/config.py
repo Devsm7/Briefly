@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Briefly"
     DEBUG: bool = False
 
-    DATABASE_URL: str = ""
+    DATABASE_URL: str = "postgresql://neondb_owner:npg_LINU7mylfe8w@ep-wandering-frost-an5bxlnm-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+
 
     SECRET_KEY: str = "change-me-to-a-long-random-secret-key-in-production"
     ALGORITHM: str = "HS256"

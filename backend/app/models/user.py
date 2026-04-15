@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from ..db.base import Base
 
 
 class User(Base):
@@ -21,5 +21,5 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    survey = relationship("SurveyPreference", back_populates="user", uselist=False)
-    interest_profile = relationship("UserInterestProfile", back_populates="user", uselist=False)
+    #survey = relationship("SurveyPreference", back_populates="user", uselist=False)
+    #interest_profile = relationship("UserInterestProfile", back_populates="user", uselist=False)

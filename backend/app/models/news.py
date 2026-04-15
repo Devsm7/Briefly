@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from ..db.base import Base
 
 
 class News(Base):

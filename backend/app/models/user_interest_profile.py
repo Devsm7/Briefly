@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from ..db.base import Base
 
 
 class UserInterestProfile(Base):
@@ -39,4 +39,4 @@ class UserInterestProfile(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    user = relationship("User", back_populates="interest_profile")
+    #user = relationship("User", back_populates="interest_profile")

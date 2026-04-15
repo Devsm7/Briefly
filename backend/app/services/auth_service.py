@@ -2,8 +2,8 @@
 
 from sqlalchemy.orm import Session
 
-from app.models.user import User
-from app.schemas.user import UserCreate
+from ..models.user import User
+from ..schemas.user import UserCreate
 
 
 class AuthService:
@@ -28,6 +28,8 @@ class AuthService:
     def authenticate_user(self, db: Session, username: str) -> User | None:
         """Find user by username. Returns User if found, else None."""
         return db.query(User).filter(User.username == username).first()
-
-
+    
+    def get_user_by_id(self, db: Session, user_id: int) -> User | None:
+        return db.query(User).filter(User.id == user_id).first()
 auth_service = AuthService()
+
