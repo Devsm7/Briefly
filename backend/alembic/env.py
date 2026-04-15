@@ -13,7 +13,6 @@ from app.models import (  # noqa: F401
     news,
     saved_article,
     survey,
-    survey_preference,
     user,
     user_interaction,
 )
