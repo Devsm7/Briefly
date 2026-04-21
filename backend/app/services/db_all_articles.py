@@ -1,6 +1,7 @@
 from ..db.session import SessionLocal
 from ..models.news import News
 from ..models.save_article import SavedArticle
+from .summarizer import get_ai_summary
 
 
 def get_news():
@@ -12,7 +13,7 @@ def get_news():
             {
                 "article_id": article.article_id,
                 "title": article.title,
-                "preview": article.description,
+                "preview": get_ai_summary(db, article.article_id, article.title, article.content or article.description),
                 "cover_image": article.image_url,
                 "date": article.published_date,
                 "content": article.content,
@@ -71,7 +72,7 @@ def get_saved_articles(user_id: int):
             {
                 "article_id": row.article.article_id,
                 "title": row.article.title,
-                "preview": row.article.description,
+                "preview": get_ai_summary(db, row.article.article_id, row.article.title, row.article.content or row.article.description),
                 "cover_image": row.article.image_url,
                 "date": row.article.published_date,
                 "content": row.article.content,
