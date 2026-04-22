@@ -34,7 +34,6 @@ if st.button("Sign In"):
                 st.session_state["logged_in"] = True
 
                 st.switch_page("pages/ForYou.py")
-                st.stop()
 
         except Exception as e:
             st.error(f"Something went wrong: {e}")
