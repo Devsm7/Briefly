@@ -28,4 +28,7 @@ class News(Base):
     # 384-dim sentence-transformer vector (populated by embedding job)
     embedding = Column(ARRAY(Float), nullable=True)
 
+    # AI-generated summary (populated by summarizer job)
+    summary = Column("ai_summary", Text, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -16,7 +16,6 @@ from app.models import (  # noqa: F401
     user_interaction,
 )
 from app.core.config import settings
-from frontend.src.interfaces.pages import saved_articles_page
 
 config = context.config
 

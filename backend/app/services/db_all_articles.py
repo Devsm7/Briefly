@@ -12,7 +12,7 @@ def get_news():
             {
                 "article_id": article.article_id,
                 "title": article.title,
-                "preview": article.description,
+                "preview": article.summary if article.summary else article.description,
                 "cover_image": article.image_url,
                 "date": article.published_date,
                 "content": article.content,

@@ -26,6 +26,7 @@ def article_card(article):
 
         if st.button("Read more..", key=f"saved_{article['article_id']}"):
             st.session_state["selected_article_id"] = article["article_id"]
+        
             st.query_params["article_id"] = article["article_id"]
             st.switch_page("pages/article_details.py", query_params={"article_id": article["article_id"]})
 
