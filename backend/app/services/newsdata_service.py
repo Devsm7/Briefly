@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.news import News
 from app.services.content_enricher import resolve_content
+from app.services.summarizer import generate_summary
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +176,10 @@ class NewsdataService:
 
             article = News(**kwargs)
             db.add(article)
+            db.flush()  # get article_id before we can summarize
+
+            # Generate summary via Ollama (at scrape time)
+            article.summary = generate_summary(kwargs.get("content"), kwargs.get("title"))
 
             if newsdata_id:
                 existing_newsdata_ids.add(newsdata_id)

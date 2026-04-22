@@ -48,10 +48,18 @@ def article_card(article: dict):
                 unsafe_allow_html=True,
             )
 
-        st.markdown(
-            f'<p class="article-card-title">{article["title"]}</p>',
-            unsafe_allow_html=True,
-        )
+        if st.button("Read more..", key=f"saved_{article['article_id']}"):
+            st.session_state["selected_article_id"] = article["article_id"]
+        
+            st.query_params["article_id"] = article["article_id"]
+            st.switch_page("pages/article_details.py", query_params={"article_id": article["article_id"]})
+
+
+def news_grid(articles, num_columns=3):
+    columns = st.columns(num_columns)
+    for i, article in enumerate(articles):
+        with columns[i % num_columns]:
+            article_card(article)
 
         preview = article.get("preview") or article.get("description") or ""
         if preview:

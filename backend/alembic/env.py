@@ -16,6 +16,7 @@ from app.models import (  # noqa: F401
     user_interaction,
 )
 from app.core.config import settings
+
 config = context.config
 
 # Wire up Python logging from alembic.ini
