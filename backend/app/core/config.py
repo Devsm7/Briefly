@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     NEWS_API_KEY: str = ""
     NEWSDATA_API_KEY: str = ""
     NEWSDATA_BASE_URL: str = "https://newsdata.io/api/1"
-    SCRAPE_INTERVAL_HOURS: int = 6
+    SCRAPE_INTERVAL_HOURS: int = 24
 
     model_config = {"env_file": str(_ENV_FILE), "extra": "ignore"}
 

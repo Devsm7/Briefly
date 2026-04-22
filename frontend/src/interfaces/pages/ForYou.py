@@ -1,60 +1,89 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import streamlit as st
+import api_client, styles
 
-import sys
-import os
+st.set_page_config(page_title="For You — Briefly", layout="wide", initial_sidebar_state="collapsed")
+styles.inject()
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
-
-from backend.app.services.db_all_articles import get_news
-
-st.set_page_config(
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-
-
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
-    st.warning("Please sign up or log in first.")
+# ── Auth guard ────────────────────────────────────────────────────────────────
+if not st.session_state.get("logged_in"):
     st.switch_page("pages/log_in_page.py")
 
-user_id = st.session_state.get("user_id")
-username = st.session_state.get("username")
+# ── Top navbar ────────────────────────────────────────────────────────────────
+title_col, saved_col, profile_col = st.columns([10, 1, 1])
+with title_col:
+    st.markdown('<h1 style="margin:0;color:#1e1b4b;">✦ Briefly</h1>', unsafe_allow_html=True)
+with saved_col:
+    if st.button("", key="go_saved", icon=":material/bookmark:", use_container_width=True):
+        st.switch_page("pages/saved_articles_page.py")
+with profile_col:
+    if st.button("", key="go_profile", icon=":material/account_circle:", use_container_width=True):
+        st.switch_page("pages/profile_page.py")
 
+st.markdown('<p style="color:#6b7280;margin-top:-0.5rem;">Your personalised news feed</p>', unsafe_allow_html=True)
+st.divider()
 
+# ── Category filter ────────────────────────────────────────────────────────────
+FILTER_OPTIONS = ["All", "Tech", "Politics", "Sport"]
+selected_filter = st.segmented_control(
+    "Category",
+    options=FILTER_OPTIONS,
+    default="All",
+    label_visibility="collapsed",
+    key="feed_filter",
+)
 
-def article_card(article):
-    with st.container():
-        st.image(article['cover_image'])
-        st.subheader(article['title']) 
-        st.write(article['preview'])
-        st.caption(article['date'])
-        if st.button("read more..", key=article["article_id"]): 
+# ── Load articles ─────────────────────────────────────────────────────────────
+with st.spinner("Loading articles…"):
+    try:
+        articles = api_client.get_news()
+    except Exception as e:
+        st.error(f"Could not load articles: {e}")
+        articles = []
+
+# Apply filter
+if selected_filter and selected_filter != "All":
+    articles = [a for a in articles if (a.get("category") or "").lower() == selected_filter.lower()]
+
+if not articles:
+    st.info("No articles found.")
+    st.stop()
+
+# ── Article grid (3 columns) ──────────────────────────────────────────────────
+def article_card(article: dict):
+    with st.container(border=True):
+        if article.get("cover_image"):
+            st.image(article["cover_image"], use_container_width=True)
+
+        if article.get("category"):
+            st.markdown(
+                f'<span class="badge">{article["category"].upper()}</span>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            f'<p class="article-card-title">{article["title"]}</p>',
+            unsafe_allow_html=True,
+        )
+
+        preview = article.get("preview") or article.get("description") or ""
+        if preview:
+            st.markdown(
+                f'<p class="article-card-preview">{preview[:200]}…</p>',
+                unsafe_allow_html=True,
+            )
+
+        st.caption(f"📅 {article.get('date', '')}  ·  {article.get('source', '')}")
+
+        if st.button("Read more →", key=f"read_{article['article_id']}", use_container_width=True):
             st.session_state["selected_article_id"] = article["article_id"]
-            st.switch_page("pages/article_details.py", query_params={"article_id": article["article_id"]})
-
-        
-
-def news_grid(articles, num_columns=3):
-    columns=st.columns(num_columns)
-    for i,article in enumerate(articles):
-        column_index = i % num_columns
-        with columns[column_index]:
-            article_card(article)
+            st.switch_page("pages/article_details.py",
+                           query_params={"article_id": article["article_id"]})
 
 
-def for_you_page():
-    title,saved,profile = st.columns([10,1,1])
-    with title:
-        st.markdown("# For you page<br>", unsafe_allow_html=True)
-    with saved:
-        if st.button("", key="saved_page",icon=":material/bookmark:",use_container_width=True):
-            st.switch_page("pages/saved_articles_page.py")
-    with profile:
-        if st.button("", key="profile_page",icon=":material/account_circle:",use_container_width=True):
-            st.switch_page("pages/profile_page.py")
-    articles = get_news() 
-
-    #articles = get_mock_articles()#temp
-    news_grid(articles)
-for_you_page()
+cols = st.columns(3)
+for i, article in enumerate(articles):
+    with cols[i % 3]:
+        article_card(article)

@@ -1,57 +1,69 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import streamlit as st
-import sys
-import os
+import api_client, styles
 
+st.set_page_config(page_title="Sign Up — Briefly", layout="centered")
+styles.inject()
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
+st.markdown('<div class="auth-bg auth-bg-purple">', unsafe_allow_html=True)
 
-from backend.app.db.session import SessionLocal
-from backend.app.services.auth_service import auth_service
-from backend.app.schemas.user import UserCreate
+with st.container():
+    st.markdown("""
+        <div class="card">
+            <p class="card-title">Create an account</p>
+            <p class="card-desc">Join Briefly and get personalised news</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-st.set_page_config(layout="centered")
+    username   = st.text_input("Username",   placeholder="janedoe",  key="reg_username")
+    first_name = st.text_input("First Name", placeholder="Jane",     key="reg_first_name")
+    last_name  = st.text_input("Last Name",  placeholder="Doe",      key="reg_last_name")
+    gender     = st.radio("Gender", ["Male", "Female"], horizontal=True, key="reg_gender")
 
-st.title("Sign Up")
-st.write("Create a new account to get started.")
-st.text_input("Username", key="username")
-st.text_input("First Name", key="first_name")
-st.text_input("Last Name", key="last_name")
-st.selectbox("Gender", ["Male", "Female"], key="gender")
+    col_btn, _ = st.columns([1, 2])
+    with col_btn:
+        submit = st.button("Create account", use_container_width=True, type="primary")
 
-if st.button("Sign Up"):
-    username = st.session_state["username"].strip()
-    first_name = st.session_state["first_name"].strip()
-    last_name = st.session_state["last_name"].strip()
-    gender = st.session_state["gender"]
+    if submit:
+        errors = []
+        u = username.strip()
+        if not u:
+            errors.append("Username is required.")
+        elif len(u) < 3:
+            errors.append("Username must be at least 3 characters.")
+        elif not u.replace("_", "").isalnum():
+            errors.append("Username: letters, numbers, and underscores only.")
+        if not first_name.strip():
+            errors.append("First name is required.")
+        if not last_name.strip():
+            errors.append("Last name is required.")
 
-    if not username or not first_name or not last_name or not gender:
-        st.error("Please fill in all fields.")
-    else:
-        db = SessionLocal()
-        try:
-            payload = UserCreate(
-                username=username,
-                first_name=first_name,
-                last_name=last_name,
-                gender=gender
-            )
+        if errors:
+            for e in errors:
+                st.markdown(f'<div class="err-box">{e}</div>', unsafe_allow_html=True)
+        else:
+            with st.spinner("Creating account…"):
+                try:
+                    api_client.register(
+                        u, first_name.strip(), last_name.strip(), gender.lower()
+                    )
+                    # Auto-login to get a token
+                    data = api_client.login(u)
+                    st.session_state["token"]    = data["access_token"]
+                    st.session_state["username"] = u
+                    st.session_state["logged_in"] = True
+                    st.success("Account created!")
+                    st.switch_page("pages/survey_page.py")
+                except RuntimeError as e:
+                    st.markdown(f'<div class="err-box">{e}</div>', unsafe_allow_html=True)
+                except Exception:
+                    st.markdown('<div class="err-box">Could not reach the server. Please try again.</div>', unsafe_allow_html=True)
 
-            user = auth_service.register_user(db, payload)
+    st.markdown("---")
+    st.markdown("Already have an account?")
+    if st.button("Sign in →"):
+        st.switch_page("pages/log_in_page.py")
 
-            st.success("Account created successfully!")
-            st.session_state["user_id"] = user.id
-            st.session_state["logged_in"] = True
-
-        except ValueError as e:
-            st.error(str(e))
-        except Exception as e:
-            st.error(f"Something went wrong: {e}")
-        finally:
-            db.close()
-    st.switch_page("pages/ForYou.py")
-
-if st.button("Go to Log In"):
-    st.switch_page("pages/log_in_page.py")
-
-
-    
+st.markdown("</div>", unsafe_allow_html=True)
