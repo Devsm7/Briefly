@@ -3,11 +3,15 @@ from ..models.news import News
 from ..models.save_article import SavedArticle
 
 
+def _quick_preview(article) -> str:
+    """Return a preview without blocking on Ollama. Uses DB-cached summary or description."""
+    return article.ai_summary or article.description or ""
+
+
 def get_news():
     db = SessionLocal()
     try:
         articles = db.query(News).all()
-
         return [
             {
                 "article_id": article.article_id,
@@ -71,7 +75,7 @@ def get_saved_articles(user_id: int):
             {
                 "article_id": row.article.article_id,
                 "title": row.article.title,
-                "preview": row.article.description,
+                "preview": _quick_preview(row.article),
                 "cover_image": row.article.image_url,
                 "date": row.article.published_date,
                 "content": row.article.content,

@@ -1,40 +1,46 @@
-"""APScheduler background task scheduler — runs scraping and digest jobs."""
+"""APScheduler background task scheduler — runs the daily news scrape job."""
 
-# TODO: Import BackgroundScheduler from apscheduler.schedulers.background
-# TODO: Import NewsFetcher, Embedder, DigestBuilder
-# TODO: Import settings from app.core.config
-# TODO: Import SessionLocal from app.db.session
+import logging
+from datetime import datetime
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
+from app.core.config import settings
+from app.db.session import SessionLocal
+from app.services.newsdata_service import NewsdataService
+
+logger = logging.getLogger(__name__)
 
 
 def run_scrape_job():
-    """
-    Scheduled job — runs every SCRAPE_INTERVAL_HOURS hours.
-    Pipeline:
-      1. NewsFetcher.fetch_all() → raw article dicts
-      2. Cleaner.is_valid() → discard invalid records
-      3. Deduplicator.filter_new() → skip already-stored articles
-      4. Insert new articles into DB
-      5. Embedder.embed_batch() → compute embeddings for new articles
-      6. Summarizer.summarize_batch() (async, non-blocking) → store summaries
-    """
-    # TODO: implement
-    raise NotImplementedError
+    """Fetch all categories from NewsData.io and upsert into DB."""
+    db = SessionLocal()
+    try:
+        service = NewsdataService()
+        raw_articles = service.fetch_all_categories()
+        inserted = service.upsert_articles(db, raw_articles)
+        logger.info("Scrape job complete: %d new articles inserted", inserted)
+    except Exception:
+        logger.exception("Scrape job failed")
+    finally:
+        db.close()
 
 
 def start_scheduler():
-    """
-    Instantiate and start the APScheduler.
-    Add run_scrape_job with an IntervalTrigger(hours=SCRAPE_INTERVAL_HOURS).
-    Return the scheduler instance (called from app startup).
-    """
-    # TODO: scheduler = BackgroundScheduler()
-    # TODO: scheduler.add_job(run_scrape_job, "interval", hours=settings.SCRAPE_INTERVAL_HOURS)
-    # TODO: scheduler.start()
-    # TODO: return scheduler
-    raise NotImplementedError
+    """Start APScheduler and return the instance (called from app startup)."""
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        run_scrape_job,
+        IntervalTrigger(hours=settings.SCRAPE_INTERVAL_HOURS),
+        next_run_time=datetime.now(),   # run immediately on startup
+    )
+    scheduler.start()
+    logger.info("Scheduler started — runs every %dh", settings.SCRAPE_INTERVAL_HOURS)
+    return scheduler
 
 
 def stop_scheduler(scheduler):
     """Gracefully shut down the scheduler (called from app shutdown)."""
-    # TODO: scheduler.shutdown(wait=False)
-    raise NotImplementedError
+    scheduler.shutdown(wait=False)
+    logger.info("Scheduler stopped")

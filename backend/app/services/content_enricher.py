@@ -71,6 +71,4 @@ def resolve_content(raw: dict) -> str | None:
             logger.debug("Scraped content from %s (%d chars)", url, len(scraped))
             return scraped
 
-    # Tier 3: description as last resort
-    description = (raw.get("description") or "").strip()
-    return description or None
+    return None   # no real content — caller will discard the article

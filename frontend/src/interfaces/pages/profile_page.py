@@ -1,45 +1,62 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import streamlit as st
-import sys
-import os
+import api_client, styles
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
+st.set_page_config(page_title="Profile — Briefly", layout="centered")
+styles.inject()
 
-from backend.app.db.session import SessionLocal
-from backend.app.services.auth_service import auth_service
+# ── Auth guard ────────────────────────────────────────────────────────────────
+if not st.session_state.get("logged_in"):
+    st.switch_page("pages/log_in_page.py")
 
-st.set_page_config(layout="centered")
+# ── Load user data ────────────────────────────────────────────────────────────
+with st.spinner("Loading profile…"):
+    try:
+        user = api_client.get_me()
+    except Exception as e:
+        st.error(f"Could not load profile: {e}")
+        user = None
 
-if "logged_in" not in st.session_state:
-    st.warning("Please log in first.")
-    st.switch_page("pages/login.py")
-
-user_id = st.session_state.get("user_id")
-
-db = SessionLocal()
-user = auth_service.get_user_by_id(db, user_id)
-
-st.title("Profile")
-st.subheader("User Information")
-
-if user:
-    st.write("**First Name:**", user.first_name)
-    st.write("**Last Name:**", user.last_name)
-    st.write("**Gender:**", user.gender)
-    st.write("**Username:**", user.username)
-else:
-    st.error("User not found.")
-
-db.close()
+# ── Header ────────────────────────────────────────────────────────────────────
+back_col, title_col = st.columns([1, 6])
+with back_col:
+    if st.button("← Back"):
+        st.switch_page("pages/ForYou.py")
+with title_col:
+    st.markdown('<h2 style="margin:0;color:#1e1b4b;">👤 Profile</h2>', unsafe_allow_html=True)
 
 st.divider()
 
-col1, col2 = st.columns(2)
+# ── User info ─────────────────────────────────────────────────────────────────
+if user:
+    with st.container(border=True):
+        st.markdown("### Account Details")
 
-with col1:
-    if st.button("Back to For You"):
-        st.switch_page("pages/ForYou.py")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"**Username**  \n{user.get('username', '—')}")
+            st.markdown(f"**First Name**  \n{user.get('first_name', '—')}")
+        with col2:
+            st.markdown(f"**Last Name**  \n{user.get('last_name', '—')}")
+            st.markdown(f"**Gender**  \n{(user.get('gender') or '—').capitalize()}")
 
-with col2:
-    if st.button("Logout"):
-        st.session_state.clear()
-        st.switch_page("pages/login.py")
+        st.caption(f"Member since {user.get('created_at', '')[:10] if user.get('created_at') else '—'}")
+else:
+    st.warning("Could not retrieve user data.")
+
+st.divider()
+
+# ── Actions ───────────────────────────────────────────────────────────────────
+st.markdown("### Preferences")
+if st.button("🔄 Retake survey", use_container_width=False):
+    for k in ["survey_step", "survey_categories", "survey_answers"]:
+        st.session_state.pop(k, None)
+    st.switch_page("pages/survey_page.py")
+
+st.divider()
+
+if st.button("🚪 Logout", type="primary", use_container_width=False):
+    st.session_state.clear()
+    st.switch_page("pages/log_in_page.py")

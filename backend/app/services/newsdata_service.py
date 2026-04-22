@@ -170,6 +170,8 @@ class NewsdataService:
 
             kwargs = _map_article(raw)
             if not kwargs["title"]:
+                continue
+            if not kwargs["content"]:
                 continue  # title is required
 
             article = News(**kwargs)
