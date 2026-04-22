@@ -14,9 +14,10 @@ st.set_page_config(
 
 
 
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+if not st.session_state.get("logged_in", False) or not st.session_state.get("user_id"):
     st.warning("Please sign up or log in first.")
     st.switch_page("pages/log_in_page.py")
+    st.stop()
 
 user_id = st.session_state.get("user_id")
 username = st.session_state.get("username")
@@ -31,9 +32,8 @@ def article_card(article):
         st.caption(article['date'])
         if st.button("read more..", key=article["article_id"]): 
             st.session_state["selected_article_id"] = article["article_id"]
-            st.switch_page("pages/article_details.py", query_params={"article_id": article["article_id"]})
-
-        
+            st.switch_page("pages/article_details.py")
+            st.stop() 
 
 def news_grid(articles, num_columns=3):
     columns=st.columns(num_columns)
