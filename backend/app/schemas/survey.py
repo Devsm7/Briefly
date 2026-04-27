@@ -14,7 +14,7 @@ class SurveySubmit(BaseModel):
     @field_validator("categories")
     @classmethod
     def categories_valid(cls, v: List[str]) -> List[str]:
-        allowed = {"tech", "politics", "sport"}
+        allowed = {"tech", "politics", "sport", "business", "health", "science"}
         invalid = [c for c in v if c not in allowed]
         if invalid:
             raise ValueError(f"Invalid categories: {invalid}. Allowed: {allowed}")

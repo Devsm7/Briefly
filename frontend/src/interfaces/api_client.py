@@ -4,7 +4,7 @@ import os
 import requests
 import streamlit as st
 
-BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BACKEND_URL", "http://localhost")
 _TIMEOUT = 15
 
 
@@ -62,23 +62,62 @@ def get_me() -> dict:
     ))
 
 
-# ── Survey ────────────────────────────────────────────────────────────────────
-
-def submit_survey(categories: list, answers: dict) -> dict:
-    return _handle(requests.post(
-        f"{BASE_URL}/api/v1/survey",
-        json={"categories": categories, "answers": answers},
+def get_me_with_survey() -> dict:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/users/me/with-survey",
         headers=_auth(),
         timeout=_TIMEOUT,
     ))
+
+
+# ── Survey ────────────────────────────────────────────────────────────────────
+
+def has_completed_survey() -> bool:
+    """Check if the current user has completed the onboarding survey."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/api/v1/survey",
+            headers=_auth(),
+            timeout=_TIMEOUT,
+        )
+        if response.status_code == 404:
+            return False
+        response.raise_for_status()
+        return True
+    except requests.exceptions.ConnectionError:
+        # Backend not running — assume no survey to avoid blocking the UI
+        return False
+    except RuntimeError as e:
+        err_str = str(e)
+        if "Not authenticated" in err_str or "403" in err_str:
+            # Auth is broken — clear session and redirect to login
+            st.session_state.clear()
+            st.switch_page("pages/log_in_page.py")
+            st.stop()
+        raise
+
+
+def submit_survey(categories: list, answers: dict) -> dict:
+    try:
+        return _handle(requests.post(
+            f"{BASE_URL}/api/v1/survey",
+            json={"categories": categories, "answers": answers},
+            headers=_auth(),
+            timeout=_TIMEOUT,
+        ))
+    except requests.exceptions.ConnectionError as exc:
+        raise RuntimeError("Backend is not running. Please start the server and try again.") from exc
 
 
 def skip_survey() -> dict:
-    return _handle(requests.post(
-        f"{BASE_URL}/api/v1/survey/skip",
-        headers=_auth(),
-        timeout=_TIMEOUT,
-    ))
+    try:
+        return _handle(requests.post(
+            f"{BASE_URL}/api/v1/survey/skip",
+            headers=_auth(),
+            timeout=_TIMEOUT,
+        ))
+    except requests.exceptions.ConnectionError as exc:
+        raise RuntimeError("Backend is not running. Please start the server and try again.") from exc
 
 
 # ── News ─────────────────────────────────────────────────────────────────────

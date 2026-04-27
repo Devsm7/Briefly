@@ -14,10 +14,13 @@ if not st.session_state.get("logged_in"):
 # ── Load user data ────────────────────────────────────────────────────────────
 with st.spinner("Loading profile…"):
     try:
-        user = api_client.get_me()
+        data = api_client.get_me_with_survey()
+        user = data.get("user", {})
+        survey = data.get("survey", None)
     except Exception as e:
         st.error(f"Could not load profile: {e}")
         user = None
+        survey = None
 
 # ── Header ────────────────────────────────────────────────────────────────────
 back_col, title_col = st.columns([1, 6])
@@ -50,6 +53,13 @@ st.divider()
 
 # ── Actions ───────────────────────────────────────────────────────────────────
 st.markdown("### Preferences")
+
+if survey and survey.get("categories"):
+    st.markdown("**Your interests:** " + ", ".join(cat.title() for cat in survey["categories"]))
+    st.caption(f"Survey completed" if survey.get("survey_completed") else "Survey skipped")
+else:
+    st.info("No preferences set yet. Complete the survey to personalize your feed.")
+
 if st.button("🔄 Retake survey", use_container_width=False):
     for k in ["survey_step", "survey_categories", "survey_answers"]:
         st.session_state.pop(k, None)

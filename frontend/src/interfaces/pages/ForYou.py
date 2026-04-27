@@ -4,7 +4,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 
-from backend.app.services.db_all_articles import get_news
+import api_client
 
 st.set_page_config(
     page_title="For You",
@@ -15,6 +15,11 @@ st.set_page_config(
 if not st.session_state.get("logged_in", False):
     st.warning("Please sign up or log in first.")
     st.switch_page("pages/log_in_page.py")
+    st.stop()
+
+# Check if user has completed the onboarding survey
+if not api_client.has_completed_survey():
+    st.switch_page("pages/survey_page.py")
     st.stop()
 
 st.markdown("""
@@ -332,7 +337,7 @@ with actions_col:
             st.switch_page("pages/profile_page.py")
             st.stop()
 
-articles = get_news()
+articles = api_client.get_news()
 
 if not articles:
     st.info("No articles available.")

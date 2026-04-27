@@ -4,21 +4,25 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 
-from backend.app.db.session import SessionLocal
-from backend.app.services.auth_service import auth_service
+import api_client
 
 st.set_page_config(layout="centered")
 
 st.title("Sign In")
 st.write("Welcome back! Please select a user to log in.")
 
-# Get all users for dropdown
-db = SessionLocal()
-users = auth_service.get_all_users(db)
-db.close()
+# Get all users via API
+try:
+    users_response = api_client._handle(api_client.requests.get(
+        f"{api_client.BASE_URL}/api/v1/auth/users",
+        timeout=api_client._TIMEOUT,
+    ))
+    users = users_response if isinstance(users_response, list) else []
+except Exception:
+    st.error("Unable to load users. Is the server running?")
+    st.stop()
 
-# Create list of tuples for selectbox
-user_options = [("", "Select a user")] + [(str(u.id), u.username) for u in users]
+user_options = [("", "Select a user")] + [(str(u["id"]), u["username"]) for u in users]
 
 selected_user_id = st.selectbox(
     "Select User",
@@ -31,25 +35,19 @@ if st.button("Sign In"):
     if not selected_user_id:
         st.error("Please select a user.")
     else:
-        db = SessionLocal()
         try:
-            user = auth_service.get_user_by_id(db, int(selected_user_id))
-
-            if not user:
-                st.error("User not found.")
-            else:
-                st.success("Login successful!")
-
-                st.session_state["user_id"] = user.id
-                st.session_state["username"] = user.username
-                st.session_state["logged_in"] = True
-
-                st.switch_page("pages/ForYou.py")
-
+            username = next((u["username"] for u in users if str(u["id"]) == selected_user_id), selected_user_id)
+            token_data = api_client.login(username)
+            st.session_state["token"] = token_data["access_token"]
+            st.session_state["user_id"] = int(selected_user_id)
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = username
+            st.success("Login successful!")
+            st.switch_page("pages/ForYou.py")
+        except RuntimeError as e:
+            st.error(f"Login failed: {e}")
         except Exception as e:
             st.error(f"Something went wrong: {e}")
-        finally:
-            db.close()
 
 if st.button("Go to Sign Up"):
     st.switch_page("pages/Sign_up_page.py")

@@ -4,12 +4,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 
-from backend.app.services.db_all_articles import (
-    get_news,
-    save_article_for_user,
-    is_article_saved,
-    remove_saved_article,
-)
+import api_client
 
 selected_id = st.query_params.get("article_id")
 user_id = st.session_state.get("user_id")
@@ -141,7 +136,7 @@ st.markdown("""
 if st.button("", key="back_btn", icon=":material/arrow_back:"):
     st.switch_page("pages/ForYou.py")
 
-articles = get_news()
+articles = api_client.get_news()
 
 if "reaction" not in st.session_state:
     st.session_state["reaction"] = None
@@ -156,7 +151,7 @@ for article in articles:
 
 is_saved = False
 if user_id and selected_article:
-    is_saved = is_article_saved(user_id, selected_article["article_id"])
+    is_saved = api_client.check_saved(selected_article["article_id"]).get("saved", False)
 
 if selected_article:
     # Title
@@ -203,11 +198,11 @@ if selected_article:
                 st.switch_page("pages/log_in_page.py")
             else:
                 if is_saved:
-                    remove_saved_article(user_id, selected_article["article_id"])
+                    api_client.unsave_article(selected_article["article_id"])
                     is_saved = False
                     st.session_state["save"] = False
                 else:
-                    save_article_for_user(user_id, selected_article["article_id"])
+                    api_client.save_article(selected_article["article_id"])
                     st.session_state["save"] = True
                     is_saved = True
 

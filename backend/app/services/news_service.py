@@ -1,38 +1,132 @@
-"""News article business logic — querying feed, trending, and library."""
+"""
+News and saved-article data access — all DB reads/writes for articles go through here.
 
-# TODO: Import Session, Article, UserInteraction models
+Models used:
+  News          — article records (title, content, summary, embedding, etc.)
+  SavedArticle  — user bookmarks (user_id → article_id)
+
+───────────────────────────────────────────────────────────────────────────────
+NOTE ON EMBEDDINGS (not yet implemented):
+  Article embeddings (384-dim vectors via sentence-transformers) are stored in
+  News.embedding.  When recommender/embedder.py is live, a background job
+  populates this column.  The recommender/ranker.py (Ranker class) then uses
+  cosine similarity between News.embedding and the user's interest_vector to
+  rank articles.  No code here needs to change when that pipeline goes live —
+  the ranker reads News.embedding and survey_preferences.interest_vector.
+───────────────────────────────────────────────────────────────────────────────
+"""
+
+from sqlalchemy.orm import Session
+
+from app.db.session import SessionLocal
+from app.models.news import News
+from app.models.save_article import SavedArticle
+
+
+def _article_to_dict(article: News) -> dict:
+    """Map a News ORM object to a dict matching the expected frontend schema."""
+    return {
+        "article_id": article.article_id,
+        "title": article.title,
+        "preview": article.summary if article.summary else article.description,
+        "cover_image": article.image_url,
+        "date": article.published_date,
+        "content": article.content,
+        "source": article.source,
+        "url": article.url,
+        "category": article.category,
+        "author": article.author,
+    }
 
 
 class NewsService:
-    """Database operations for the news feed and article queries."""
+    """All DB operations for news articles and saved bookmarks."""
 
-    def get_feed(self, db, category=None, page: int = 1, per_page: int = 20):
+    def get_news(self) -> list[dict]:
         """
-        Return a paginated list of articles, optionally filtered by category.
-        Orders by published_at descending.
-        Returns (articles: List[Article], total: int).
+        Return all articles that have a summary (fully processed).
+        An article without a summary is skipped — it hasn't been enriched yet.
         """
-        # TODO: implement
-        raise NotImplementedError
+        db = SessionLocal()
+        try:
+            articles = db.query(News).filter(News.summary.isnot(None)).all()
+            return [_article_to_dict(a) for a in articles]
+        finally:
+            db.close()
 
-    def get_article_by_id(self, db, article_id: int):
-        """
-        Return a single Article by primary key.
-        Raises HTTP 404 if not found.
-        """
-        # TODO: implement
-        raise NotImplementedError
+    def save_article_for_user(self, user_id: int, article_id: int) -> SavedArticle:
+        """Bookmark an article for a user. Idempotent — returns existing record."""
+        db = SessionLocal()
+        try:
+            existing = (
+                db.query(SavedArticle)
+                .filter(
+                    SavedArticle.user_id == user_id,
+                    SavedArticle.article_id == article_id,
+                )
+                .first()
+            )
+            if existing:
+                return existing
+            saved = SavedArticle(user_id=user_id, article_id=article_id)
+            db.add(saved)
+            db.commit()
+            db.refresh(saved)
+            return saved
+        finally:
+            db.close()
 
-    def get_trending(self, db, hours: int = 24, limit: int = 20):
-        """
-        Return articles ordered by number of interactions in the last `hours`.
-        """
-        # TODO: aggregate user_interactions, filter created_at > now - hours
-        raise NotImplementedError
+    def get_saved_articles(self, user_id: int) -> list[dict]:
+        """Return all saved articles for a user, newest first, only if they have a summary."""
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(SavedArticle)
+                .join(News, SavedArticle.article_id == News.article_id)
+                .filter(SavedArticle.user_id == user_id)
+                .filter(News.summary.isnot(None))
+                .order_by(SavedArticle.saved_at.desc())
+                .all()
+            )
+            return [_article_to_dict(row.article) for row in rows]
+        finally:
+            db.close()
 
-    def get_library(self, db, user_id: int):
-        """
-        Return all articles bookmarked (action='save') by the given user.
-        """
-        # TODO: join news on user_interactions WHERE user_id AND action='save'
-        raise NotImplementedError
+    def remove_saved_article(self, user_id: int, article_id: int) -> bool:
+        """Remove a bookmark. Returns True if deleted, False if it didn't exist."""
+        db = SessionLocal()
+        try:
+            saved = (
+                db.query(SavedArticle)
+                .filter(
+                    SavedArticle.user_id == user_id,
+                    SavedArticle.article_id == article_id,
+                )
+                .first()
+            )
+            if not saved:
+                return False
+            db.delete(saved)
+            db.commit()
+            return True
+        finally:
+            db.close()
+
+    def is_article_saved(self, user_id: int, article_id: int) -> bool:
+        """Check whether an article is bookmarked by the user."""
+        db = SessionLocal()
+        try:
+            return (
+                db.query(SavedArticle)
+                .filter(
+                    SavedArticle.user_id == user_id,
+                    SavedArticle.article_id == article_id,
+                )
+                .first()
+                is not None
+            )
+        finally:
+            db.close()
+
+
+news_service = NewsService()

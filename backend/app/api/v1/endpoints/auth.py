@@ -36,3 +36,10 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=access_token)
+
+
+@router.get("/users")
+def get_users(db: Session = Depends(get_db)):
+    """GET /auth/users — Return all active users (for login dropdown)."""
+    users = auth_service.get_all_users(db)
+    return [{"id": u.id, "username": u.username} for u in users]
