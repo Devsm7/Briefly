@@ -31,5 +31,9 @@ class AuthService:
     
     def get_user_by_id(self, db: Session, user_id: int) -> User | None:
         return db.query(User).filter(User.id == user_id).first()
+
+    def get_all_users(self, db: Session) -> list[User]:
+        return db.query(User).order_by(User.username).all()
+
 auth_service = AuthService()
 

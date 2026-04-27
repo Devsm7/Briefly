@@ -181,6 +181,12 @@ class NewsdataService:
             # Generate summary via Ollama (at scrape time)
             article.summary = generate_summary(kwargs.get("content"), kwargs.get("title"))
 
+            # Only save article if summary was successfully generated
+            if not article.summary:
+                db.rollback()
+                logger.warning("Skipped article '%s' — summarization failed", kwargs.get("title"))
+                continue
+
             if newsdata_id:
                 existing_newsdata_ids.add(newsdata_id)
             if url:

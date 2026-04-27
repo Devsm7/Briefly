@@ -1,133 +1,226 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 import streamlit as st
-import api_client, styles
+import sys
+import os
 
-st.set_page_config(page_title="Article — Briefly", layout="centered")
-styles.inject()
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 
-# ── Resolve article ID ────────────────────────────────────────────────────────
-article_id_param = st.query_params.get("article_id") or st.session_state.get("selected_article_id")
-if article_id_param is None:
-    st.error("No article selected.")
-    if st.button("← Back to feed"):
-        st.switch_page("pages/ForYou.py")
-    st.stop()
+from backend.app.services.db_all_articles import (
+    get_news,
+    save_article_for_user,
+    is_article_saved,
+    remove_saved_article,
+)
 
-try:
-    article_id = int(article_id_param)
-except ValueError:
-    st.error("Invalid article ID.")
-    st.stop()
+selected_id = st.query_params.get("article_id")
+user_id = st.session_state.get("user_id")
 
-user_logged_in = st.session_state.get("logged_in", False)
+if selected_id is not None:
+    selected_id = int(selected_id)
 
-# ── Load all articles and find the one we need ─────────────────────────────────
-with st.spinner("Loading article…"):
-    try:
-        articles = api_client.get_news()
-    except Exception as e:
-        st.error(f"Could not load articles: {e}")
-        st.stop()
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 
-selected = next((a for a in articles if a["article_id"] == article_id), None)
+st.markdown("""
+<style>
+    .stApp {
+        background: #0b1020;
+    }
 
-if not selected:
-    st.error("Article not found.")
-    if st.button("← Back to feed"):
-        st.switch_page("pages/ForYou.py")
-    st.stop()
+    [data-testid="stHeader"] {
+        background: transparent;
+    }
 
-# ── Saved state (check on first render only) ──────────────────────────────────
-if f"is_saved_{article_id}" not in st.session_state:
-    if user_logged_in:
-        st.session_state[f"is_saved_{article_id}"] = api_client.check_saved(article_id)
-    else:
-        st.session_state[f"is_saved_{article_id}"] = False
+    [data-testid="stMainBlockContainer"] {
+        max-width: 900px;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
 
-if f"reaction_{article_id}" not in st.session_state:
-    st.session_state[f"reaction_{article_id}"] = None
+    .article-title {
+        color: #f8fafc;
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.25;
+        margin-bottom: 1rem;
+    }
 
-is_saved = st.session_state[f"is_saved_{article_id}"]
-reaction = st.session_state[f"reaction_{article_id}"]
+    .article-meta {
+        color: #91a0b8;
+        font-size: 0.9rem;
+        display: flex;
+        gap: 20px;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #1e293b;
+    }
 
-# ── Back button ───────────────────────────────────────────────────────────────
-if st.button("← Back to feed"):
+    .article-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    [data-testid="stMainBlockContainer"] {
+        max-width: 1200px;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .article-image {
+        width: 100%;
+        height: 450px;
+        object-fit: cover;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        display: block;
+    }
+
+    .article-content {
+        color: #d8dfeb;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 2rem;
+    }
+
+    .action-bar {
+        display: flex;
+        gap: 12px;
+        padding-top: 1.5rem;
+        border-top: 1px solid #1e293b;
+    }
+
+    .action-btn {
+        background: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .action-btn:hover {
+        background: #2a3a5a;
+    }
+
+    .action-btn.active {
+        background: #667eea;
+    }
+
+    div[data-testid="stButton"] > button {
+        border-radius: 10px;
+        min-height: 44px;
+    }
+
+    .back-btn {
+        background: #1e293b !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    .back-btn:hover {
+        background: #2a3a5a !important;
+    }
+
+    .st-key-like_btn button {
+        background: #1e293b;
+    }
+
+    .st-key-dislike_btn button {
+        background: #1e293b;
+    }
+
+    .st-key-save_btn button {
+        background: #1e293b;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Back button
+if st.button("", key="back_btn", icon=":material/arrow_back:"):
     st.switch_page("pages/ForYou.py")
 
-# ── Article header ────────────────────────────────────────────────────────────
-if selected.get("category"):
-    st.markdown(f'<span class="badge">{selected["category"].upper()}</span>', unsafe_allow_html=True)
+articles = get_news()
 
-st.title(selected["title"])
+if "reaction" not in st.session_state:
+    st.session_state["reaction"] = None
+if "save" not in st.session_state:
+    st.session_state["save"] = False
 
-if selected.get("cover_image"):
-    st.image(selected["cover_image"], use_container_width=True)
+selected_article = None
+for article in articles:
+    if article["article_id"] == selected_id:
+        selected_article = article
+        break
 
-# Meta row
-date_col, author_col, source_col, _ = st.columns([2, 2, 2, 1])
-with date_col:
-    st.caption(f"📅 {selected.get('date', '')}")
-with author_col:
-    st.caption(f"✍️ {selected.get('author', 'Unknown')}")
-with source_col:
-    st.caption(f"📰 {selected.get('source', '')}")
+is_saved = False
+if user_id and selected_article:
+    is_saved = is_article_saved(user_id, selected_article["article_id"])
 
-st.divider()
+if selected_article:
+    # Title
+    st.markdown(f'<div class="article-title">{selected_article["title"]}</div>', unsafe_allow_html=True)
 
-# ── Article body ──────────────────────────────────────────────────────────────
-content = selected.get("content") or selected.get("preview") or ""
-st.markdown(content)
+    # Meta info
+    date = selected_article.get("date", "Unknown date")
+    author = selected_article.get("author", "Unknown author")
+    source = selected_article.get("source", "Unknown source")
 
-if selected.get("url"):
-    st.markdown(f"[Read original article →]({selected['url']})")
+    st.markdown(f"""
+    <div class="article-meta">
+        <span>📅 {date}</span>
+        <span>✍️ {author}</span>
+        <span>📰 {source}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.divider()
+    # Cover image
+    if selected_article.get("cover_image"):
+        st.markdown(
+            f'<img src="{selected_article["cover_image"]}" class="article-image" />',
+            unsafe_allow_html=True
+        )
 
-# ── Interaction buttons ───────────────────────────────────────────────────────
-like_col, dislike_col, save_col, _ = st.columns([1, 1, 1, 6])
+    # Content
+    content = selected_article.get("content", "No content available.")
+    st.markdown(f'<div class="article-content">{content}</div>', unsafe_allow_html=True)
 
-with like_col:
-    liked = reaction == "like"
-    if st.button("", key="like_btn", icon=":material/thumb_up:"):
-        st.session_state[f"reaction_{article_id}"] = None if liked else "like"
-        st.rerun()
+    # Action buttons
+    col_like, col_dislike, col_save, col_space = st.columns([1, 1, 1, 8])
 
-with dislike_col:
-    disliked = reaction == "dislike"
-    if st.button("", key="dislike_btn", icon=":material/thumb_down:"):
-        st.session_state[f"reaction_{article_id}"] = None if disliked else "dislike"
-        st.rerun()
+    with col_like:
+        if st.button("", key="like_btn", icon=":material/thumb_up:"):
+            st.session_state["reaction"] = "like" if st.session_state["reaction"] != "like" else None
 
-with save_col:
-    if st.button("", key="save_btn", icon=":material/bookmark:"):
-        if not user_logged_in:
-            st.switch_page("pages/log_in_page.py")
-        else:
-            try:
+    with col_dislike:
+        if st.button("", key="dislike_btn", icon=":material/thumb_down:"):
+            st.session_state["reaction"] = "dislike" if st.session_state["reaction"] != "dislike" else None
+
+    with col_save:
+        if st.button("", key="save_btn", icon=":material/bookmark:"):
+            if not user_id:
+                st.switch_page("pages/log_in_page.py")
+            else:
                 if is_saved:
-                    api_client.unsave_article(article_id)
-                    st.session_state[f"is_saved_{article_id}"] = False
+                    remove_saved_article(user_id, selected_article["article_id"])
+                    is_saved = False
+                    st.session_state["save"] = False
                 else:
-                    api_client.save_article(article_id)
-                    st.session_state[f"is_saved_{article_id}"] = True
-                st.rerun()
-            except RuntimeError as e:
-                st.error(str(e))
+                    save_article_for_user(user_id, selected_article["article_id"])
+                    st.session_state["save"] = True
+                    is_saved = True
 
-# ── Visual feedback for buttons ───────────────────────────────────────────────
-reaction_after = st.session_state[f"reaction_{article_id}"]
-is_saved_after = st.session_state[f"is_saved_{article_id}"]
+    # Button highlight styles
+    if st.session_state["reaction"] == "like":
+        st.markdown("<style>.st-key-like_btn button { background: #28a745 !important; }</style>", unsafe_allow_html=True)
+    elif st.session_state["reaction"] == "dislike":
+        st.markdown("<style>.st-key-dislike_btn button { background: #dc3545 !important; }</style>", unsafe_allow_html=True)
 
-css_parts = []
-if reaction_after == "like":
-    css_parts.append(".st-key-like_btn button, .st-key-like_btn button:hover { background:#16a34a!important; color:white!important; }")
-elif reaction_after == "dislike":
-    css_parts.append(".st-key-dislike_btn button, .st-key-dislike_btn button:hover { background:#dc2626!important; color:white!important; }")
+    if is_saved:
+        st.markdown("<style>.st-key-save_btn button { background: #667eea !important; }</style>", unsafe_allow_html=True)
 
-if is_saved_after:
-    css_parts.append(".st-key-save_btn button, .st-key-save_btn button:hover { background:#4f46e5!important; color:white!important; }")
-
-if css_parts:
-    st.markdown(f"<style>{''.join(css_parts)}</style>", unsafe_allow_html=True)
+else:
+    st.error("Article not found.")
+    if st.button("Back to For You", icon=":material/arrow_back:"):
+        st.switch_page("pages/ForYou.py")
