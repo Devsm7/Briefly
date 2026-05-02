@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.models.news import News
 from app.services.content_enricher import resolve_content
 from app.services.summarizer import generate_summary
+from app.recommender.embedder import embedder
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +30,10 @@ _CATEGORY_MAP: dict[str, str] = {
     "top": "top",
 }
 
-# Categories to fetch (NewsData slugs)
-_DEFAULT_CATEGORIES = ["technology", "business", "sports", "politics"]
+# Fetch parameters
+_DEFAULT_CATEGORIES = ["business", "sports", "politics", "technology", "science"]
+_DEFAULT_COUNTRIES  = "sa,cn,us"
+_DEFAULT_LANGUAGES  = "ar,en"
 
 
 def _map_article(raw: dict) -> dict:
@@ -53,7 +57,7 @@ def _map_article(raw: dict) -> dict:
         "published_date": raw.get("pubDate"),
         "source": raw.get("source_id"),
         "category": category,
-        "language": "en",   # normalise — API returns "english" or "en"
+        "language": (raw.get("language") or "en").lower(),
         "keywords": raw.get("keywords") or [],
         "author": author,
     }
@@ -69,7 +73,8 @@ class NewsdataService:
     def fetch_by_category(
         self,
         category: str,
-        language: str = "en",
+        language: str = _DEFAULT_LANGUAGES,
+        country: str = _DEFAULT_COUNTRIES,
         max_pages: int = 3,
     ) -> list[dict]:
         """
@@ -84,10 +89,10 @@ class NewsdataService:
                 "apikey": self._api_key,
                 "category": category,
                 "language": language,
+                "country": country,
                 "image": 1,          # only articles with images
                 "video": 0,          # exclude video articles
                 "removeduplicate": 1,
-                # NOTE: `field` filter requires a paid plan — omit to get all fields
             }
             if next_page:
                 params["page"] = next_page
@@ -154,11 +159,6 @@ class NewsdataService:
 
         inserted = 0
         for raw in raw_articles:
-            # English-only guard — API returns "english" or "en"
-            lang = (raw.get("language") or "").lower()
-            if lang not in ("en", "english"):
-                continue
-
             newsdata_id = raw.get("article_id")
             url = raw.get("link")
 
@@ -180,6 +180,8 @@ class NewsdataService:
 
             # Generate summary via Ollama (at scrape time)
             article.summary = generate_summary(kwargs.get("content"), kwargs.get("title"))
+            if article.summary:
+                article.embedding = embedder.embed_text(article.summary)
 
             # Only save article if summary was successfully generated
             if not article.summary:

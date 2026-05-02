@@ -7,9 +7,38 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.news_service import news_service
+from app.tasks.scheduler import run_embed_job, run_scrape_job
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["news"])
+
+
+@router.post("/fetch", status_code=status.HTTP_200_OK)
+def trigger_fetch():
+    """POST /news/fetch — Manually trigger a full news scrape and insert into DB."""
+    try:
+        run_scrape_job()
+        return {"status": "done"}
+    except Exception as exc:
+        logger.error("Manual fetch failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Fetch failed: {exc}",
+        ) from exc
+
+
+@router.post("/embed", status_code=status.HTTP_200_OK)
+def trigger_embed():
+    """POST /news/embed — Manually trigger embedding for un-embedded articles."""
+    try:
+        run_embed_job()
+        return {"status": "done"}
+    except Exception as exc:
+        logger.error("Manual embed failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Embed failed: {exc}",
+        ) from exc
 
 
 @router.get("")
