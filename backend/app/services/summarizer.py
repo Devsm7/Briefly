@@ -62,3 +62,58 @@ Summary:"""
             logger.warning("Unexpected error during summarization: %s", exc)
             if attempt == retries:
                 return None
+
+
+def generate_category_summary(articles: list[dict], category: str) -> str | None:
+    """
+    Generate a single overall summary for all articles in a category.
+    Builds a digest prompt from article titles and summaries, asks for
+    a concise paragraph covering the key themes and highlights.
+    """
+    if not articles:
+        return None
+
+    items = []
+    for a in articles:
+        title = a.get("title", "")
+        preview = a.get("preview") or a.get("description") or ""
+        items.append(f"- {title}: {preview[:200]}")
+
+    context = "\n".join(items[:20])
+
+    prompt = f"""You are a news digest writer. Given the following articles in the {category} category,
+write a concise 2-3 paragraph overview that captures the key themes, major developments,
+and why they matter. Write in a neutral, informative tone. Do not just list articles —
+synthesize them into a coherent summary.
+
+Articles:
+{context}
+
+Digest:"""
+
+    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
+
+    for attempt in range(2):
+        try:
+            response = requests.post(
+                url,
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.3, "num_predict": 350},
+                },
+                timeout=_SUMMARY_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+            digest = (data.get("response") or "").strip()
+            if digest:
+                logger.debug("Generated category digest for %s (%d chars)", category, len(digest))
+                return digest
+            if attempt == 1:
+                return None
+        except Exception as exc:
+            logger.warning("Category digest generation failed: %s", exc)
+            if attempt == 1:
+                return None

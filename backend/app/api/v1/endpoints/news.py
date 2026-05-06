@@ -81,6 +81,23 @@ def search_articles(
         ) from exc
 
 
+@router.get("/digest")
+def get_category_digests():
+    """
+    GET /news/digest
+    Returns an AI-generated overall summary for each category.
+    Each digest synthesizes all summarized articles in that category.
+    """
+    try:
+        return news_service.get_category_digests()
+    except Exception as exc:
+        logger.error("Digest generation failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Digest failed: {exc}",
+        ) from exc
+
+
 @router.get("/library")
 def get_library(current_user: User = Depends(get_current_user)):
     """GET /news/library — Saved articles for the current user."""

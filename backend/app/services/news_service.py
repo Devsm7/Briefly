@@ -16,11 +16,14 @@ NOTE ON EMBEDDINGS (not yet implemented):
 ───────────────────────────────────────────────────────────────────────────────
 """
 
+from collections import defaultdict
+
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.news import News
 from app.models.save_article import SavedArticle
+from app.services.summarizer import generate_category_summary
 
 
 def _article_to_dict(article: News) -> dict:
@@ -51,6 +54,43 @@ class NewsService:
         try:
             articles = db.query(News).filter(News.summary.isnot(None)).all()
             return [_article_to_dict(a) for a in articles]
+        finally:
+            db.close()
+
+    def get_articles_by_category(self, category: str) -> list[dict]:
+        """Return all articles with summaries for a given category."""
+        db = SessionLocal()
+        try:
+            articles = (
+                db.query(News)
+                .filter(News.category == category.lower())
+                .filter(News.summary.isnot(None))
+                .all()
+            )
+            return [_article_to_dict(a) for a in articles]
+        finally:
+            db.close()
+
+    def get_category_digests(self) -> dict[str, str]:
+        """
+        Generate an AI digest for each category that has summarized articles.
+        Returns { category: digest_text } for categories with articles.
+        """
+        db = SessionLocal()
+        try:
+            articles = db.query(News).filter(News.summary.isnot(None)).all()
+            by_category: dict[str, list[dict]] = defaultdict(list)
+            for a in articles:
+                if a.category:
+                    by_category[a.category.lower()].append(_article_to_dict(a))
+
+            digests = {}
+            for category, arts in by_category.items():
+                digest = generate_category_summary(arts, category)
+                if digest:
+                    digests[category] = digest
+
+            return digests
         finally:
             db.close()
 
@@ -128,8 +168,7 @@ class NewsService:
         finally:
             db.close()
 
-
-def search_articles(
+    def search_articles(
         self,
         query: str | None = None,
         category: str | None = None,
@@ -155,7 +194,6 @@ def search_articles(
 
             articles = q.all()
 
-            # Semantic search via embeddings
             if query:
                 embedder = Embedder()
                 ranker = Ranker()
@@ -167,7 +205,6 @@ def search_articles(
                         score = ranker.cosine_similarity(query_embedding, article.embedding)
                         scored.append((score, article))
                     elif article.title:
-                        # Keyword fallback: title match
                         if query.lower() in article.title.lower():
                             scored.append((0.0, article))
 
@@ -179,3 +216,6 @@ def search_articles(
             return [_article_to_dict(a) for a in articles]
         finally:
             db.close()
+
+
+news_service = NewsService()
