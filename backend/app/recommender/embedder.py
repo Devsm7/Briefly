@@ -4,14 +4,7 @@ from sentence_transformers import SentenceTransformer
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 
-_model = None
-
-
-def _get_model():
-    global _model
-    if _model is None:
-        _model = SentenceTransformer(MODEL_NAME)
-    return _model
+_model = SentenceTransformer(MODEL_NAME)
 
 
 class Embedder:
@@ -19,8 +12,11 @@ class Embedder:
 
     def embed_text(self, text: str) -> list[float]:
         """Return a 384-dim embedding vector for the given text."""
-        return _get_model().encode(text, convert_to_numpy=True).tolist()
+        return _model.encode(text, normalize_embeddings=True).tolist()
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Batch-embed a list of texts. Returns list of 384-dim vectors."""
-        return _get_model().encode(texts, batch_size=32, convert_to_numpy=True).tolist()
+        return _model.encode(texts, batch_size=32, normalize_embeddings=True).tolist()
+
+
+embedder = Embedder()

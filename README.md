@@ -19,8 +19,9 @@
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 + Tailwind CSS |
-| Backend | FastAPI + SQLAlchemy + Alembic |
+| Frontend | Streamlit |
+| Backend | FastAPI + 
+ + Alembic |
 | Database | PostgreSQL |
 | Embeddings | sentence-transformers (`all-MiniLM-L6-v2`) |
 | LLM | Ollama (Mistral 7B) |
@@ -45,12 +46,9 @@ Briefly/
 │       ├── agents/   # Summarizer, DigestBuilder (LLM)
 │       ├── scraper/  # RSS fetcher, cleaner, deduplicator
 │       └── tasks/    # APScheduler background jobs
-├── frontend/         # Next.js 14 application
+├── frontend/         # Streamlit application
 │   └── src/
-│       ├── app/      # Pages (dashboard, onboarding, library, settings…)
-│       ├── components/ # UI, layout, news, survey, feedback components
-│       ├── hooks/    # useAuth, useFeed, useInteractions
-│       └── lib/      # Axios client, auth token helpers
+│       └── interfaces/ # Streamlit pages and UI components
 ├── infra/            # Nginx config, PostgreSQL init SQL
 ├── docker-compose.yml
 └── Makefile
@@ -94,7 +92,7 @@ make migrate
 
 | Service | URL |
 |---|---|
-| Frontend | <http://localhost:3000> |
+| Frontend | <http://localhost:8501> |
 | Backend API | <http://localhost:8000> |
 | API Docs | <http://localhost:8000/docs> |
 
@@ -124,7 +122,4 @@ make test-backend  # run pytest
 9. `backend/app/api/` — route handlers
 10. `backend/app/tasks/` — APScheduler
 11. `backend/app/main.py` — wire everything together
-12. `frontend/src/lib/` — API client, auth helpers
-13. `frontend/src/hooks/` — React hooks
-14. `frontend/src/components/` — UI components
-15. `frontend/src/app/` — pages
+12. `frontend/src/interfaces/` — Streamlit pages and UI

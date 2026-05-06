@@ -8,6 +8,8 @@ services:
     container_name: briefly_backend
     restart: unless-stopped
     env_file: .env
+    depends_on:
+      - ollama
     volumes:
       - ./backend:/app
       - model_cache:/app/.cache
@@ -26,6 +28,16 @@ services:
     depends_on:
       - backend
 
+  # ── Ollama (LLM) ──────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: briefly_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
   # ── Nginx Reverse Proxy ────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -41,3 +53,4 @@ services:
 
 volumes:
   model_cache:
+  ollama_data:

@@ -1,7 +1,5 @@
 """Batch summarization script — run via: python scripts/batch_summarize.py"""
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from app.db.session import SessionLocal
 from app.models.news import News
 from app.services.summarizer import generate_summary
