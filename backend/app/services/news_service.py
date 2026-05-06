@@ -129,4 +129,53 @@ class NewsService:
             db.close()
 
 
-news_service = NewsService()
+def search_articles(
+        self,
+        query: str | None = None,
+        category: str | None = None,
+        limit: int = 10,
+    ) -> list[dict]:
+        """
+        Semantic search using article embeddings + keyword fallback.
+
+        1. If query is provided, embed it and find similar articles by cosine similarity.
+        2. If no articles have embeddings, fall back to keyword ilike on title/description.
+        3. Filter by category if provided.
+        4. Return up to `limit` results ordered by relevance score.
+        """
+        from app.recommender.embedder import Embedder
+        from app.recommender.ranker import Ranker
+
+        db = SessionLocal()
+        try:
+            q = db.query(News).filter(News.summary.isnot(None))
+
+            if category:
+                q = q.filter(News.category == category.lower())
+
+            articles = q.all()
+
+            # Semantic search via embeddings
+            if query:
+                embedder = Embedder()
+                ranker = Ranker()
+                query_embedding = embedder.embed_text(query)
+
+                scored = []
+                for article in articles:
+                    if article.embedding:
+                        score = ranker.cosine_similarity(query_embedding, article.embedding)
+                        scored.append((score, article))
+                    elif article.title:
+                        # Keyword fallback: title match
+                        if query.lower() in article.title.lower():
+                            scored.append((0.0, article))
+
+                scored.sort(key=lambda x: x[0], reverse=True)
+                articles = [a for _, a in scored[:limit]]
+            else:
+                articles = articles[:limit]
+
+            return [_article_to_dict(a) for a in articles]
+        finally:
+            db.close()

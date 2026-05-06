@@ -25,6 +25,33 @@ def list_articles():
         ) from exc
 
 
+@router.get("/search")
+def search_articles(
+    q: str | None = None,
+    category: str | None = None,
+    limit: int = 10,
+):
+    """
+    GET /news/search?q=<query>&category=<cat>&limit=<n>
+    Semantic search using article embeddings.
+    Falls back to keyword match on title if embeddings are missing.
+    Requires q (search query) — returns 400 if empty.
+    """
+    if q is not None and q.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="q cannot be empty",
+        )
+    try:
+        return news_service.search_articles(query=q, category=category, limit=limit)
+    except Exception as exc:
+        logger.error("Search failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {exc}",
+        ) from exc
+
+
 @router.get("/library")
 def get_library(current_user: User = Depends(get_current_user)):
     """GET /news/library — Saved articles for the current user."""

@@ -1,7 +1,6 @@
 """Rank articles by cosine similarity to the user's interest vector."""
 
-# TODO: Import numpy as np
-# TODO: Import Article, SurveyPreference models
+import numpy as np
 
 
 class Ranker:
@@ -12,8 +11,13 @@ class Ranker:
         Compute cosine similarity between two equal-length vectors.
         Returns a float in [-1.0, 1.0].
         """
-        # TODO: np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-        raise NotImplementedError
+        a = np.array(vec_a, dtype=np.float32)
+        b = np.array(vec_b, dtype=np.float32)
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return float(np.dot(a, b) / (norm_a * norm_b))
 
     def rank_articles(
         self,
@@ -28,5 +32,4 @@ class Ranker:
 
         Fallback: if an article has no embedding, score by category weight match.
         """
-        # TODO: implement scoring and sorting
         raise NotImplementedError
