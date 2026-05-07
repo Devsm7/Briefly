@@ -3,7 +3,15 @@
 import logging
 
 import numpy as np
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.api.deps import get_current_user, get_db
+from app.models.news import News
+from app.models.survey import SurveyPreference
+from app.models.user import User
+from app.models.user_interaction import UserInteraction
+from app.recommender.ranker import Ranker
+from app.services.news_service import article_to_dict
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -22,14 +30,26 @@ ranker = Ranker()
 def get_recommendations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    page: int = 1,
+    per_page: int = 50,
 ):
-    """GET /recommendations — Return top-20 personalized articles for the current user."""
+    """
+    GET /recommendations — Return paginated personalized articles for the current user.
+
+    Query params:
+      page     — page number, 1-indexed (default 1)
+      per_page — articles per page (default 50, max 100)
+    """
+    if page < 1:
+        raise HTTPException(status_code=400, detail="page must be >= 1")
+    if per_page < 1 or per_page > 100:
+        raise HTTPException(status_code=400, detail="per_page must be between 1 and 100")
+
     survey = db.query(SurveyPreference).filter(
         SurveyPreference.user_id == current_user.id
     ).first()
     interest_vector = survey.interest_vector if survey else {}
 
-    # Collect liked and disliked article IDs
     liked_ids = [
         r.article_id for r in
         db.query(UserInteraction.article_id)
@@ -57,13 +77,25 @@ def get_recommendations(
         .all()
     ] if disliked_ids else []
 
-    # Fallback — no likes yet: return recent articles from top survey categories
+    # Fallback — no likes yet: rank all articles by survey interest_vector
     if not liked_embeddings:
-        top_categories = sorted(interest_vector, key=interest_vector.get, reverse=True)[:2]
-        query = db.query(News).order_by(News.created_at.desc())
-        if top_categories:
-            query = query.filter(News.category.in_(top_categories))
-        return query.limit(20).all()
+        all_articles = db.query(News).filter(News.summary.isnot(None)).all()
+        ranked = ranker.rank_articles(
+            all_articles,
+            user_embedding=None,   # no personal embedding yet
+            interest_vector=interest_vector,
+            top_k=1000,
+        )
+        total = len(ranked)
+        offset = (page - 1) * per_page
+        page_articles = ranked[offset:offset + per_page]
+        return {
+            "articles": [article_to_dict(a) for a in page_articles],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": (total + per_page - 1) // per_page or 1,
+        }
 
     # Build user embedding: mean(liked) − 0.3 × mean(disliked), then normalize
     user_emb = np.mean(liked_embeddings, axis=0)
@@ -73,5 +105,16 @@ def get_recommendations(
     if norm > 0:
         user_emb = user_emb / norm
 
-    articles = db.query(News).filter(News.embedding != None).all()
-    return ranker.rank_articles(articles, user_emb.tolist(), interest_vector, top_k=20)
+    all_articles = db.query(News).filter(News.embedding != None, News.summary.isnot(None)).all()
+    ranked = ranker.rank_articles(all_articles, user_emb.tolist(), interest_vector, top_k=1000)
+
+    total = len(ranked)
+    offset = (page - 1) * per_page
+    page_articles = ranked[offset:offset + per_page]
+    return {
+        "articles": [article_to_dict(a) for a in page_articles],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page or 1,
+    }

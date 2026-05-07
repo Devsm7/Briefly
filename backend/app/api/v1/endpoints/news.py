@@ -42,16 +42,42 @@ def trigger_embed():
 
 
 @router.get("")
-def list_articles():
-    """GET /news — Return all articles."""
+def list_articles(page: int = 1, per_page: int = 50):
+    """
+    GET /news — Return paginated articles.
+
+    Query params:
+      page     — page number, 1-indexed (default 1)
+      per_page — articles per page (default 50, max 100)
+    """
+    if page < 1:
+        raise HTTPException(status_code=400, detail="page must be >= 1")
+    if per_page < 1 or per_page > 100:
+        raise HTTPException(status_code=400, detail="per_page must be between 1 and 100")
     try:
-        return news_service.get_news()
+        articles, total = news_service.get_news(page=page, per_page=per_page)
+        return {
+            "articles": articles,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": (total + per_page - 1) // per_page,
+        }
     except Exception as exc:
         logger.error("Failed to load news feed: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Could not load articles: {exc}",
         ) from exc
+
+
+@router.get("/{article_id}")
+def get_article(article_id: int):
+    """GET /news/{article_id} — Return a single article by ID."""
+    article = news_service.get_article_by_id(article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return article
 
 
 @router.get("/search")

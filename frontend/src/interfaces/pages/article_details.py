@@ -6,11 +6,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 import api_client
 
-selected_id = st.query_params.get("article_id")
+selected_id = st.session_state.get("viewing_article_id")
 user_id = st.session_state.get("user_id")
-
-if selected_id is not None:
-    selected_id = int(selected_id)
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 
@@ -136,22 +133,21 @@ st.markdown("""
 if st.button("", key="back_btn", icon=":material/arrow_back:"):
     st.switch_page("pages/ForYou.py")
 
-articles = api_client.get_news()
-
 if "reaction" not in st.session_state:
     st.session_state["reaction"] = None
 if "save" not in st.session_state:
     st.session_state["save"] = False
 
 selected_article = None
-for article in articles:
-    if article["article_id"] == selected_id:
-        selected_article = article
-        break
+if selected_id:
+    try:
+        selected_article = api_client.get_article(selected_id)
+    except Exception:
+        selected_article = None
 
 is_saved = False
 if user_id and selected_article:
-    is_saved = api_client.check_saved(selected_article["article_id"]).get("saved", False)
+    is_saved = bool(api_client.check_saved(selected_article["article_id"]))
 
 if selected_article:
     # Title

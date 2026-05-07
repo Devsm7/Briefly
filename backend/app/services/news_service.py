@@ -26,7 +26,7 @@ from app.models.save_article import SavedArticle
 from app.services.summarizer import generate_category_summary
 
 
-def _article_to_dict(article: News) -> dict:
+def article_to_dict(article: News) -> dict:
     """Map a News ORM object to a dict matching the expected frontend schema."""
     return {
         "article_id": article.article_id,
@@ -45,15 +45,34 @@ def _article_to_dict(article: News) -> dict:
 class NewsService:
     """All DB operations for news articles and saved bookmarks."""
 
-    def get_news(self) -> list[dict]:
+    def get_news(self, page: int = 1, per_page: int = 50) -> tuple[list[dict], int]:
         """
-        Return all articles that have a summary (fully processed).
-        An article without a summary is skipped — it hasn't been enriched yet.
+        Return paginated articles that have a summary (fully processed).
+
+        Returns (articles, total_count) so the frontend can render page controls.
         """
         db = SessionLocal()
         try:
-            articles = db.query(News).filter(News.summary.isnot(None)).all()
-            return [_article_to_dict(a) for a in articles]
+            total = db.query(News).filter(News.summary.isnot(None)).count()
+            offset = (page - 1) * per_page
+            articles = (
+                db.query(News)
+                .filter(News.summary.isnot(None))
+                .order_by(News.created_at.desc())
+                .offset(offset)
+                .limit(per_page)
+                .all()
+            )
+            return [article_to_dict(a) for a in articles], total
+        finally:
+            db.close()
+
+    def get_article_by_id(self, article_id: int) -> dict | None:
+        """Return a single article by ID, or None if not found."""
+        db = SessionLocal()
+        try:
+            article = db.query(News).filter(News.article_id == article_id).first()
+            return article_to_dict(article) if article else None
         finally:
             db.close()
 
@@ -67,7 +86,7 @@ class NewsService:
                 .filter(News.summary.isnot(None))
                 .all()
             )
-            return [_article_to_dict(a) for a in articles]
+            return [article_to_dict(a) for a in articles]
         finally:
             db.close()
 
@@ -82,7 +101,7 @@ class NewsService:
             by_category: dict[str, list[dict]] = defaultdict(list)
             for a in articles:
                 if a.category:
-                    by_category[a.category.lower()].append(_article_to_dict(a))
+                    by_category[a.category.lower()].append(article_to_dict(a))
 
             digests = {}
             for category, arts in by_category.items():
@@ -128,7 +147,7 @@ class NewsService:
                 .order_by(SavedArticle.saved_at.desc())
                 .all()
             )
-            return [_article_to_dict(row.article) for row in rows]
+            return [article_to_dict(row.article) for row in rows]
         finally:
             db.close()
 
@@ -213,7 +232,7 @@ class NewsService:
             else:
                 articles = articles[:limit]
 
-            return [_article_to_dict(a) for a in articles]
+            return [article_to_dict(a) for a in articles]
         finally:
             db.close()
 

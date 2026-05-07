@@ -122,8 +122,28 @@ def skip_survey() -> dict:
 
 # ── News ─────────────────────────────────────────────────────────────────────
 
-def get_news() -> list:
-    return _handle(requests.get(f"{BASE_URL}/api/v1/news", timeout=_TIMEOUT))
+def get_news(page: int = 1, per_page: int = 50) -> dict:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/news",
+        params={"page": page, "per_page": per_page},
+        timeout=_TIMEOUT,
+    ))
+
+
+def get_recommendations(page: int = 1, per_page: int = 50) -> dict:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/recommendations",
+        params={"page": page, "per_page": per_page},
+        headers=_auth(),
+        timeout=_TIMEOUT,
+    ))
+
+
+def get_article(article_id: int) -> dict:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/news/{article_id}",
+        timeout=_TIMEOUT,
+    ))
 
 
 def get_library() -> list:

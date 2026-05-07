@@ -187,41 +187,93 @@ def format_meta(article):
 
 
 def lead_story(article):
-    left, right = st.columns([1.45, 1], gap="medium")
+    """Lead story card — image and text in one unified card, side-by-side layout."""
+    preview = article.get("preview", "No preview available.")
+    cover = article.get("cover_image", "")
+    title = article.get("title", "Untitled")
+    meta = format_meta(article)
+    art_id = article["article_id"]
 
-    with left:
-        if article.get("cover_image"):
-            st.markdown(
-                f'<img src="{article["cover_image"]}" style="width:100%;height:430px;object-fit:cover;border-radius:18px;" />',
-                unsafe_allow_html=True
-            )
-        else:
-            st.info("No image available")
+    st.markdown("""
+    <style>
+    .lead-card {
+        background: #12192b;
+        border: 1px solid #1e293b;
+        border-radius: 22px;
+        overflow: hidden;
+        display: flex;
+    }
+    .lead-img-wrap {
+        flex: 0 0 45%;
+        overflow: hidden;
+        border-radius: 14px 0 0 14px;
+    }
+    .lead-img {
+        width: 100%;
+        height: 340px;
+        object-fit: cover;
+        display: block;
+        border-radius: 14px 0 0 14px;
+    }
+    .lead-body {
+        flex: 1;
+        padding: 24px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .lead-label {
+        color: #667eea;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+    }
+    .lead-title {
+        color: #f8fafc;
+        font-size: 1.5rem;
+        font-weight: 800;
+        line-height: 1.3;
+        margin: 0 0 12px;
+    }
+    .lead-meta {
+        color: #91a0b8;
+        font-size: 0.82rem;
+        margin-bottom: 14px;
+    }
+    .lead-preview {
+        color: #d8dfeb;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        margin: 0;
+    }
+    @media (max-width: 700px) {
+        .lead-card { flex-direction: column; }
+        .lead-img-wrap { flex: none; width: 100%; }
+        .lead-img { height: 220px; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    with right:
-        preview = article.get("preview", "No preview available.")
+    card_img = f'<img src="{cover}" class="lead-img" loading="lazy" decoding="async" onerror="this.style.display=\'none\'" />' if cover else ""
 
-        st.markdown(f"""
-        <div class="lead-card">
-            <div class="section-label">Top story</div>
-            <div class="lead-title">{article.get("title", "Untitled")}</div>
-            <div class="news-meta">{format_meta(article)}</div>
-            <div class="lead-ai-label">✨ AI Summary</div>
-            <div class="lead-preview">{preview}</div>
+    st.markdown(f"""
+    <div class="lead-card">
+        <div class="lead-img-wrap">{card_img}</div>
+        <div class="lead-body">
+            <div class="lead-label">✨ Top story</div>
+            <div class="lead-title">{title}</div>
+            <div class="lead-meta">{meta}</div>
+            <div class="lead-preview">{preview[:280]}{'…' if len(preview) > 280 else ''}</div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
-        if st.button(
-            "Read full story",
-            key=f'lead_{article["article_id"]}',
-            icon=":material/arrow_forward:",
-            use_container_width=True
-        ):
-            st.switch_page(
-                "pages/article_details.py",
-                query_params={"article_id": str(article["article_id"])}
-            )
-            st.stop()
+    if st.button("Read full story", key=f"lead_{art_id}", icon=":material/arrow_forward:", use_container_width=True):
+        st.session_state["viewing_article_id"] = art_id
+        st.switch_page("pages/article_details.py")
+        st.stop()
 
 
 def article_card(article):
@@ -280,7 +332,7 @@ def article_card(article):
 
     st.markdown(f"""
     <div class="article-card">
-        <img src="{article.get("cover_image", "")}" class="card-img" />
+        <img src="{article.get("cover_image", "")}" class="card-img" loading="lazy" decoding="async" />
         <div class="card-title">{article.get("title", "Untitled")}</div>
         <div class="card-meta">{format_meta(article)}</div>
         <div class="ai-label">✨ AI Summary</div>
@@ -294,10 +346,8 @@ def article_card(article):
         icon=":material/arrow_forward:",
         use_container_width=True
     ):
-        st.switch_page(
-            "pages/article_details.py",
-            query_params={"article_id": str(article["article_id"])}
-        )
+        st.session_state["viewing_article_id"] = article["article_id"]
+        st.switch_page("pages/article_details.py")
         st.stop()
 
 
@@ -337,7 +387,18 @@ with actions_col:
             st.switch_page("pages/profile_page.py")
             st.stop()
 
-articles = api_client.get_news()
+PER_PAGE = 50
+
+# Track current page in session state
+if "news_page" not in st.session_state:
+    st.session_state.news_page = 1
+
+response = api_client.get_recommendations(page=st.session_state.news_page, per_page=PER_PAGE)
+
+articles = response.get("articles", [])
+total = response.get("total", 0)
+total_pages = response.get("pages", 1)
+current_page = response.get("page", 1)
 
 if not articles:
     st.info("No articles available.")
@@ -347,3 +408,25 @@ else:
 
     if len(articles) > 1:
         render_news_grid(articles[1:])
+
+    # Pagination controls
+    if total_pages > 1:
+        st.markdown("---")
+        col_prev, col_info, col_next = st.columns([1, 2, 1], vertical_alignment="center")
+        with col_prev:
+            if current_page > 1:
+                if st.button("← Previous", use_container_width=True):
+                    st.session_state.news_page = current_page - 1
+                    st.rerun()
+        with col_info:
+            st.markdown(
+                f"<div style='text-align:center; color:#91a0b8; font-size:0.9rem;'>"
+                f"Page {current_page} of {total_pages} &nbsp;|&nbsp; {total} articles"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with col_next:
+            if current_page < total_pages:
+                if st.button("Next →", use_container_width=True):
+                    st.session_state.news_page = current_page + 1
+                    st.rerun()
