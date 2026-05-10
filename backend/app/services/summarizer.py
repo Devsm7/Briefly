@@ -64,6 +64,37 @@ Summary:"""
                 return None
 
 
+def translate_to_arabic(text: str) -> str | None:
+    """Translate English text to Arabic using Ollama."""
+    if not text or len(text) < 5:
+        return None
+
+    prompt = f"""Translate the following text to Arabic. Output only the translated text, nothing else.
+
+Text:
+{text[:1500]}
+
+Translation:"""
+
+    try:
+        response = requests.post(
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.1, "num_predict": 300},
+            },
+            timeout=_SUMMARY_TIMEOUT,
+        )
+        response.raise_for_status()
+        result = (response.json().get("response") or "").strip()
+        return result or None
+    except Exception as exc:
+        logger.warning("Translation failed: %s", exc)
+        return None
+
+
 def generate_category_summary(articles: list[dict], category: str) -> str | None:
     """
     Generate a single overall summary for all articles in a category.

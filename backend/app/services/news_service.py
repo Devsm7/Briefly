@@ -28,10 +28,17 @@ from app.services.summarizer import generate_category_summary
 
 def article_to_dict(article: News) -> dict:
     """Map a News ORM object to a dict matching the expected frontend schema."""
+    if article.language == "ar" and article.summary_ar:
+        preview = article.summary_ar
+    elif article.summary:
+        preview = article.summary
+    else:
+        preview = article.description
+
     return {
         "article_id": article.article_id,
         "title": article.title,
-        "preview": article.summary if article.summary else article.description,
+        "preview": preview,
         "cover_image": article.image_url,
         "date": article.published_date,
         "content": article.content,
@@ -39,6 +46,7 @@ def article_to_dict(article: News) -> dict:
         "url": article.url,
         "category": article.category,
         "author": article.author,
+        "language": article.language,
     }
 
 

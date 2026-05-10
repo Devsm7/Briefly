@@ -8,8 +8,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.news import News
 from app.services.content_enricher import resolve_content
-from app.services.summarizer import generate_summary
+from app.services.image_validator import resolve_image_url
+from app.services.summarizer import generate_summary, translate_to_arabic
 from app.recommender.embedder import embedder
+from app.recommender.category_classifier import classify
+from app.recommender.dedup import add_to_matrix, is_near_duplicate, load_existing_embeddings
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,8 @@ _DEFAULT_CATEGORIES = ["business", "sports", "politics", "technology", "science"
 _DEFAULT_COUNTRIES  = "sa,cn,us"
 _DEFAULT_LANGUAGES  = "ar,en"
 
+from app.services.image_constants import PLACEHOLDER_IMAGE_URL
+
 
 def _map_article(raw: dict) -> dict:
     """Map a raw NewsData result dict to News model kwargs."""
@@ -53,7 +58,7 @@ def _map_article(raw: dict) -> dict:
         "description": (raw.get("description") or "").strip() or None,
         "content": resolve_content(raw),
         "url": raw.get("link"),
-        "image_url": raw.get("image_url"),
+        "image_url": resolve_image_url(raw.get("image_url")),
         "published_date": raw.get("pubDate"),
         "source": raw.get("source_id"),
         "category": category,
@@ -157,6 +162,9 @@ class NewsdataService:
             for row in db.query(News.url).filter(News.url.isnot(None)).all()
         }
 
+        existing_embs = load_existing_embeddings(db)
+        logger.info("Loaded %d existing embeddings for semantic dedup", existing_embs.shape[0])
+
         inserted = 0
         for raw in raw_articles:
             newsdata_id = raw.get("article_id")
@@ -180,14 +188,32 @@ class NewsdataService:
 
             # Generate summary via Ollama (at scrape time)
             article.summary = generate_summary(kwargs.get("content"), kwargs.get("title"))
-            if article.summary:
-                article.embedding = embedder.embed_text(article.summary)
-
-            # Only save article if summary was successfully generated
             if not article.summary:
                 db.rollback()
                 logger.warning("Skipped article '%s' — summarization failed", kwargs.get("title"))
                 continue
+
+            if kwargs.get("language") == "ar":
+                article.summary_ar = translate_to_arabic(article.summary)
+
+            emb = embedder.embed_text(article.summary)
+
+            duplicate, sim = is_near_duplicate(emb, existing_embs)
+            if duplicate:
+                db.rollback()
+                logger.info("Skipped article (duplicate sim=%.3f): %s", sim, kwargs.get("title", "")[:60])
+                continue
+
+            article.embedding = emb
+
+            # Reclassify "top" articles using LLM
+            if article.category == "top":
+                article.category = classify(
+                    emb,
+                    title=kwargs.get("title", ""),
+                    summary=article.summary,
+                )
+            existing_embs = add_to_matrix(emb, existing_embs)
 
             if newsdata_id:
                 existing_newsdata_ids.add(newsdata_id)

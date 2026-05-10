@@ -30,5 +30,7 @@ class News(Base):
 
     # AI-generated summary (populated by summarizer job)
     summary = Column("ai_summary", Text, nullable=True)
+    # Arabic translation of the summary (only for language="ar" articles)
+    summary_ar = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

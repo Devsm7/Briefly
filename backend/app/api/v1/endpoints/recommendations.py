@@ -42,8 +42,8 @@ def get_recommendations(
     """
     if page < 1:
         raise HTTPException(status_code=400, detail="page must be >= 1")
-    if per_page < 1 or per_page > 100:
-        raise HTTPException(status_code=400, detail="per_page must be between 1 and 100")
+    if per_page < 1 or per_page > 1000:
+        raise HTTPException(status_code=400, detail="per_page must be between 1 and 1000")
 
     survey = db.query(SurveyPreference).filter(
         SurveyPreference.user_id == current_user.id

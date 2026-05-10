@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import sys
 import os
 
@@ -169,6 +170,28 @@ st.markdown("""
     .top-gap {
         margin-top: 0.2rem;
     }
+
+    .cat-tag {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+    }
+    .cat-business     { background: #1e3a5f; color: #60a5fa; }
+    .cat-sport        { background: #1a3a2a; color: #4ade80; }
+    .cat-politics     { background: #3b1f3f; color: #c084fc; }
+    .cat-tech         { background: #1a2f3f; color: #38bdf8; }
+    .cat-health       { background: #3a2020; color: #f87171; }
+    .cat-entertainment{ background: #3a2a10; color: #fb923c; }
+    .cat-world        { background: #1e2f40; color: #67e8f9; }
+    .cat-environment  { background: #1a3020; color: #86efac; }
+    .cat-food         { background: #3a2e10; color: #fde68a; }
+    .cat-tourism      { background: #2a1a3a; color: #e879f9; }
+    .cat-other        { background: #1e2535; color: #94a3b8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -177,7 +200,11 @@ def short_preview(text, limit=200):
     if not text:
         return "No preview available."
     text = str(text).strip()
-    return text 
+    return text
+
+
+def get_preview(article: dict) -> str:
+    return article.get("preview") or "No preview available."
 
 
 def format_meta(article):
@@ -186,9 +213,19 @@ def format_meta(article):
     return f"{source} • {date}"
 
 
+def category_tag(article) -> str:
+    cat = (article.get("category") or "other").lower().replace(" ", "")
+    label = cat.capitalize()
+    css_class = f"cat-{cat}" if cat in {
+        "business", "sport", "politics", "tech", "health",
+        "entertainment", "world", "environment", "food", "tourism"
+    } else "cat-other"
+    return f'<span class="cat-tag {css_class}">{label}</span>'
+
+
 def lead_story(article):
     """Lead story card — image and text in one unified card, side-by-side layout."""
-    preview = article.get("preview", "No preview available.")
+    preview = get_preview(article)
     cover = article.get("cover_image", "")
     title = article.get("title", "Untitled")
     meta = format_meta(article)
@@ -262,7 +299,7 @@ def lead_story(article):
     <div class="lead-card">
         <div class="lead-img-wrap">{card_img}</div>
         <div class="lead-body">
-            <div class="lead-label">✨ Top story</div>
+            <div class="lead-label">✨ Top story &nbsp;{category_tag(article)}</div>
             <div class="lead-title">{title}</div>
             <div class="lead-meta">{meta}</div>
             <div class="lead-preview">{preview[:280]}{'…' if len(preview) > 280 else ''}</div>
@@ -328,11 +365,12 @@ def article_card(article):
     </style>
     """, unsafe_allow_html=True)
 
-    preview = article.get("preview") or "No preview available."
+    preview = get_preview(article)
 
     st.markdown(f"""
     <div class="article-card">
         <img src="{article.get("cover_image", "")}" class="card-img" loading="lazy" decoding="async" />
+        {category_tag(article)}
         <div class="card-title">{article.get("title", "Untitled")}</div>
         <div class="card-meta">{format_meta(article)}</div>
         <div class="ai-label">✨ AI Summary</div>
@@ -357,6 +395,17 @@ def render_news_grid(articles):
         with cols[i % 3]:
             article_card(article)
 
+
+if st.session_state.pop("_scroll_top", False):
+    components.html("""
+    <script>
+        var el = parent.document.querySelector('[data-testid="stAppViewContainer"]');
+        if (el) el.scrollTop = 0;
+        parent.window.scrollTo(0, 0);
+        parent.document.documentElement.scrollTop = 0;
+        parent.document.body.scrollTop = 0;
+    </script>
+    """, height=0)
 
 title_col, actions_col = st.columns([10, 2], vertical_alignment="center")
 
@@ -389,25 +438,32 @@ with actions_col:
 
 PER_PAGE = 50
 
-# Track current page in session state
 if "news_page" not in st.session_state:
     st.session_state.news_page = 1
 
-response = api_client.get_recommendations(page=st.session_state.news_page, per_page=PER_PAGE)
+# Fetch all ranked articles once and cache; page navigation slices locally
+if "recommendations_cache" not in st.session_state:
+    with st.spinner("Loading your feed…"):
+        response = api_client.get_recommendations(page=1, per_page=300)
+        st.session_state.recommendations_cache = response.get("articles", [])
 
-articles = response.get("articles", [])
-total = response.get("total", 0)
-total_pages = response.get("pages", 1)
-current_page = response.get("page", 1)
+all_articles = st.session_state.recommendations_cache
+total = len(all_articles)
+total_pages = max((total + PER_PAGE - 1) // PER_PAGE, 1)
+current_page = st.session_state.news_page
+
+offset = (current_page - 1) * PER_PAGE
+articles = all_articles[offset:offset + PER_PAGE]
 
 if not articles:
     st.info("No articles available.")
 else:
-    lead_story(articles[0])
-    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-
-    if len(articles) > 1:
+    if current_page == 1:
+        lead_story(articles[0])
+        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
         render_news_grid(articles[1:])
+    else:
+        render_news_grid(articles)
 
     # Pagination controls
     if total_pages > 1:
@@ -417,6 +473,7 @@ else:
             if current_page > 1:
                 if st.button("← Previous", use_container_width=True):
                     st.session_state.news_page = current_page - 1
+                    st.session_state._scroll_top = True
                     st.rerun()
         with col_info:
             st.markdown(
@@ -429,4 +486,5 @@ else:
             if current_page < total_pages:
                 if st.button("Next →", use_container_width=True):
                     st.session_state.news_page = current_page + 1
+                    st.session_state._scroll_top = True
                     st.rerun()

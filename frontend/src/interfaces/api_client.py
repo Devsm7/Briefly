@@ -135,8 +135,20 @@ def get_recommendations(page: int = 1, per_page: int = 50) -> dict:
         f"{BASE_URL}/api/v1/recommendations",
         params={"page": page, "per_page": per_page},
         headers=_auth(),
-        timeout=_TIMEOUT,
+        timeout=60,
     ))
+
+
+def translate_summary(text: str) -> str | None:
+    try:
+        data = _handle(requests.post(
+            f"{BASE_URL}/api/v1/translate",
+            json={"text": text},
+            timeout=60,
+        ))
+        return data.get("translated")
+    except Exception:
+        return None
 
 
 def get_article(article_id: int) -> dict:
