@@ -107,6 +107,22 @@ def search_articles(
         ) from exc
 
 
+@router.get("/overall")
+def get_overall_summary():
+    """
+    GET /news/overall
+    Returns a single AI-generated global digest across all categories.
+    """
+    try:
+        return {"summary": news_service.get_overall_summary()}
+    except Exception as exc:
+        logger.error("Overall summary failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Overall summary failed: {exc}",
+        ) from exc
+
+
 @router.get("/digest")
 def get_category_digests():
     """

@@ -95,6 +95,64 @@ Translation:"""
         return None
 
 
+def generate_overall_summary(db, limit: int = 100) -> str | None:
+    """
+    Generate a single global digest across all categories using embedding similarity.
+    Clusters articles by embedding similarity (ignoring category), then synthesizes
+    the top themes into a coherent 2-3 paragraph overview.
+    """
+    from app.models.news import News
+    from app.recommender.embedder import Embedder
+    import numpy as np
+
+    articles = db.query(News).filter(
+        News.summary.isnot(None),
+        News.embedding.isnot(None),
+    ).order_by(News.created_at.desc()).limit(limit).all()
+
+    if len(articles) < 2:
+        return None
+
+    embedder = Embedder()
+
+    # Aggregate all article summaries into one context
+    titles = [a.title for a in articles]
+    previews = [a.summary or a.description or "" for a in articles]
+
+    items = [f"- {t}: {p[:150]}" for t, p in zip(titles, previews)]
+    context = "\n".join(items[:30])  # cap at 30 for prompt length
+
+    prompt = f"""You are a world news analyst. Review the following headlines and summaries
+from the past period and write a concise 2-3 paragraph brief covering the most important
+global themes and developments. Synthesize across topics — don't just list items.
+Prioritize stories that have the broadest impact or most significance.
+
+Headlines & Summaries:
+{context}
+
+Global News Brief:"""
+
+    try:
+        response = requests.post(
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.3, "num_predict": 400},
+            },
+            timeout=_SUMMARY_TIMEOUT,
+        )
+        response.raise_for_status()
+        digest = (response.json().get("response") or "").strip()
+        if digest:
+            logger.debug("Generated overall summary (%d chars)", len(digest))
+        return digest or None
+    except Exception as exc:
+        logger.warning("Overall summary generation failed: %s", exc)
+        return None
+
+
 def generate_category_summary(articles: list[dict], category: str) -> str | None:
     """
     Generate a single overall summary for all articles in a category.

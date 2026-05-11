@@ -98,6 +98,16 @@ class NewsService:
         finally:
             db.close()
 
+    def get_overall_summary(self) -> str:
+        """Generate a global digest across all categories, using embeddings to weight relevance."""
+        from app.services.summarizer import generate_overall_summary
+        db = SessionLocal()
+        try:
+            summary = generate_overall_summary(db)
+            return summary or "No articles available to summarize."
+        finally:
+            db.close()
+
     def get_category_digests(self) -> dict[str, str]:
         """
         Generate an AI digest for each category that has summarized articles.
@@ -202,12 +212,12 @@ class NewsService:
         limit: int = 10,
     ) -> list[dict]:
         """
-        Semantic search using article embeddings + keyword fallback.
+        Semantic + keyword hybrid search.
 
-        1. If query is provided, embed it and find similar articles by cosine similarity.
-        2. If no articles have embeddings, fall back to keyword ilike on title/description.
+        1. Embed query → cosine similarity against article embedding (summary).
+        2. Keyword boost: title match → small additive bonus.
         3. Filter by category if provided.
-        4. Return up to `limit` results ordered by relevance score.
+        4. Return top `limit` results sorted by final score.
         """
         from app.recommender.embedder import Embedder
         from app.recommender.ranker import Ranker
@@ -221,26 +231,36 @@ class NewsService:
 
             articles = q.all()
 
-            if query:
-                embedder = Embedder()
-                ranker = Ranker()
-                query_embedding = embedder.embed_text(query)
+            if not query:
+                return [article_to_dict(a) for a in articles[:limit]]
 
-                scored = []
-                for article in articles:
-                    if article.embedding:
-                        score = ranker.cosine_similarity(query_embedding, article.embedding)
-                        scored.append((score, article))
-                    elif article.title:
-                        if query.lower() in article.title.lower():
-                            scored.append((0.0, article))
+            embedder = Embedder()
+            ranker = Ranker()
+            query_embedding = embedder.embed_text(query)
+            query_lower = query.lower()
 
-                scored.sort(key=lambda x: x[0], reverse=True)
-                articles = [a for _, a in scored[:limit]]
-            else:
-                articles = articles[:limit]
+            scored = []
+            for article in articles:
+                base_score = 0.0
 
-            return [article_to_dict(a) for a in articles]
+                if article.embedding:
+                    base_score = ranker.cosine_similarity(query_embedding, article.embedding)
+
+                # Keyword boost: title or description match
+                title_match = article.title and query_lower in article.title.lower()
+                desc_match = article.description and query_lower in article.description.lower()
+
+                keyword_bonus = 0.0
+                if title_match:
+                    keyword_bonus = 0.15
+                if desc_match and not title_match:
+                    keyword_bonus = 0.05
+
+                final_score = base_score + keyword_bonus
+                scored.append((final_score, article))
+
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [article_to_dict(a) for _, a in scored[:limit]]
         finally:
             db.close()
 

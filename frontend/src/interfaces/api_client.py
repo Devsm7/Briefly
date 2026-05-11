@@ -192,3 +192,30 @@ def check_saved(article_id: int) -> bool:
         return data.get("saved", False)
     except Exception:
         return False
+
+
+# ── Search ────────────────────────────────────────────────────────────────────
+
+def search_articles(q: str, category: str | None = None, limit: int = 10) -> list:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/news/search",
+        params={"q": q, "category": category, "limit": limit},
+        timeout=_TIMEOUT,
+    ))
+
+
+# ── Category Digests ────────────────────────────────────────────────────────────
+
+def get_overall_summary() -> str:
+    data = _handle(requests.get(
+        f"{BASE_URL}/api/v1/news/overall",
+        timeout=60,
+    ))
+    return data.get("summary", "")
+
+
+def get_category_digests() -> dict:
+    return _handle(requests.get(
+        f"{BASE_URL}/api/v1/news/digest",
+        timeout=_TIMEOUT,
+    ))
