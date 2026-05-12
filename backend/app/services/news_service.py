@@ -98,12 +98,21 @@ class NewsService:
         finally:
             db.close()
 
-    def get_overall_summary(self) -> str:
-        """Generate a global digest across all categories, using embeddings to weight relevance."""
+    def get_overall_summary(self, user_id: int | None = None) -> str:
+        """Generate a news brief, personalized by user interest scores if user_id is provided."""
+        from app.models.survey import SurveyPreference
         from app.services.summarizer import generate_overall_summary
         db = SessionLocal()
         try:
-            summary = generate_overall_summary(db)
+            interest_vector = None
+            if user_id:
+                pref = db.query(SurveyPreference).filter(
+                    SurveyPreference.user_id == user_id,
+                    SurveyPreference.survey_completed == 1,
+                ).first()
+                if pref and pref.interest_vector:
+                    interest_vector = pref.interest_vector
+            summary = generate_overall_summary(db, interest_vector=interest_vector)
             return summary or "No articles available to summarize."
         finally:
             db.close()

@@ -192,6 +192,47 @@ st.markdown("""
     .cat-food         { background: #3a2e10; color: #fde68a; }
     .cat-tourism      { background: #2a1a3a; color: #e879f9; }
     .cat-other        { background: #1e2535; color: #94a3b8; }
+
+    /* Search input */
+    div[data-testid="stTextInput"] input {
+        background: #12192b !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 14px !important;
+        color: #f8fafc !important;
+        font-size: 1rem !important;
+        padding: 0.65rem 1rem !important;
+    }
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 2px rgba(102,126,234,0.25) !important;
+    }
+    div[data-testid="stTextInput"] input::placeholder {
+        color: #4a5568 !important;
+    }
+
+    /* Floating AI Brief button */
+    #ai-brief-float-anchor + div.element-container {
+        position: fixed !important;
+        bottom: 2rem;
+        left: 2rem;
+        z-index: 9999;
+    }
+    #ai-brief-float-anchor + div.element-container button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50px !important;
+        padding: 0.6rem 1.5rem !important;
+        font-size: 0.88rem !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 22px rgba(102, 126, 234, 0.55) !important;
+        min-height: unset !important;
+        letter-spacing: 0.02em;
+    }
+    #ai-brief-float-anchor + div.element-container button:hover {
+        box-shadow: 0 6px 30px rgba(102, 126, 234, 0.75) !important;
+        transform: translateY(-2px);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -396,6 +437,54 @@ def render_news_grid(articles):
             article_card(article)
 
 
+@st.dialog("✨ AI News Brief", width="large")
+def show_ai_brief():
+    # Fetch English summary only once — cache survives radio toggles within the same dialog session
+    if "ai_brief_en" not in st.session_state:
+        with st.spinner("Generating AI brief…"):
+            try:
+                st.session_state.ai_brief_en = api_client.get_overall_summary()
+            except Exception as e:
+                st.error(f"Could not load summary: {e}")
+                return
+
+    en_summary = st.session_state.ai_brief_en
+    if not en_summary:
+        st.info("No summary available yet.")
+        return
+
+    lang = st.radio(
+        "",
+        ["🇬🇧 English", "🇸🇦 العربية"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="ai_brief_lang",
+    )
+
+    if lang == "🇸🇦 العربية":
+        # Translate only once — cache survives toggling back and forth
+        if "ai_brief_ar" not in st.session_state:
+            with st.spinner("Translating to Arabic…"):
+                st.session_state.ai_brief_ar = api_client.translate_summary(en_summary)
+        ar_text = st.session_state.ai_brief_ar
+        if ar_text:
+            st.markdown(
+                f"<div style='color:#d8dfeb;font-size:1.05rem;line-height:2;"
+                f"direction:rtl;text-align:right;font-family:Arial,sans-serif'>{ar_text}</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.error("Translation failed — tap English and try Arabic again.")
+    else:
+        # Use st.markdown so **bold** and other markdown renders natively
+        st.markdown(
+            f"<style>.brief-en {{color:#d8dfeb;font-size:1rem;line-height:1.8}}"
+            f".brief-en b,.brief-en strong{{color:#f8fafc}}</style>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(en_summary)
+
+
 if st.session_state.pop("_scroll_top", False):
     components.html("""
     <script>
@@ -436,6 +525,21 @@ with actions_col:
             st.switch_page("pages/profile_page.py")
             st.stop()
 
+# ── Search bar ────────────────────────────────────────────────────────────────
+search_col, _ = st.columns([3, 1])
+with search_col:
+    search_query = st.text_input(
+        "search",
+        placeholder="🔍  Search articles…",
+        key="search_input",
+        label_visibility="collapsed",
+    )
+
+# ── Floating AI Brief button ──────────────────────────────────────────────────
+st.markdown('<div id="ai-brief-float-anchor"></div>', unsafe_allow_html=True)
+if st.button("✨ AI Brief", key="ai_brief_btn"):
+    show_ai_brief()
+
 PER_PAGE = 50
 
 if "news_page" not in st.session_state:
@@ -455,9 +559,28 @@ current_page = st.session_state.news_page
 offset = (current_page - 1) * PER_PAGE
 articles = all_articles[offset:offset + PER_PAGE]
 
-if not articles:
+if search_query and search_query.strip():
+    # ── Search results ────────────────────────────────────────────────────────
+    with st.spinner(f'Searching for "{search_query}"…'):
+        try:
+            results = api_client.search_articles(q=search_query.strip(), limit=30)
+        except Exception as e:
+            st.error(f"Search failed: {e}")
+            results = []
+    if results:
+        st.markdown(
+            f"<p style='color:#91a0b8; font-size:0.9rem; margin-bottom:1rem;'>"
+            f"{len(results)} results for <b style='color:#f8fafc'>\"{search_query}\"</b></p>",
+            unsafe_allow_html=True,
+        )
+        render_news_grid(results)
+    else:
+        st.info(f'No results found for "{search_query}".')
+
+elif not articles:
     st.info("No articles available.")
 else:
+    # ── Normal feed ───────────────────────────────────────────────────────────
     if current_page == 1:
         lead_story(articles[0])
         st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)

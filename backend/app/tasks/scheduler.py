@@ -1,9 +1,10 @@
-"""APScheduler background task scheduler — runs the daily news scrape job."""
+"""APScheduler background task scheduler — runs English and Arabic news fetch jobs every hour in parallel."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -150,19 +151,23 @@ def run_arabic_fetch_job():
 
 def start_scheduler():
     """Start APScheduler and return the instance (called from app startup)."""
-    scheduler = BackgroundScheduler()
+    scheduler = BackgroundScheduler(
+        executors={"default": ThreadPoolExecutor(max_workers=4)},
+    )
     scheduler.add_job(
         run_scrape_job,
-        IntervalTrigger(hours=settings.SCRAPE_INTERVAL_HOURS),
+        IntervalTrigger(hours=1),
+        id="english_fetch",
         next_run_time=datetime.now(),
     )
     scheduler.add_job(
         run_arabic_fetch_job,
         IntervalTrigger(hours=1),
-        next_run_time=datetime.now() + timedelta(minutes=5),  # stagger after main scrape
+        id="arabic_fetch",
+        next_run_time=datetime.now(),
     )
     scheduler.start()
-    logger.info("Scheduler started — scrape every %dh, Arabic fetch every 1h", settings.SCRAPE_INTERVAL_HOURS)
+    logger.info("Scheduler started — English and Arabic news fetch every 1h (parallel)")
     return scheduler
 
 

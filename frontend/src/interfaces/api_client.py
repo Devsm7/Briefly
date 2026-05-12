@@ -209,7 +209,8 @@ def search_articles(q: str, category: str | None = None, limit: int = 10) -> lis
 def get_overall_summary() -> str:
     data = _handle(requests.get(
         f"{BASE_URL}/api/v1/news/overall",
-        timeout=60,
+        headers=_auth(),
+        timeout=300,
     ))
     return data.get("summary", "")
 

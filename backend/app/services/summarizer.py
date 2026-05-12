@@ -1,14 +1,23 @@
-"""Ollama-powered article summarization."""
+"""Article summarization — Ollama for per-article summaries, Groq for translation and overall brief."""
 
 import logging
 
 import requests
+from openai import OpenAI as _OpenAI
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_SUMMARY_TIMEOUT = 240  # seconds
+_SUMMARY_TIMEOUT = 240  # seconds — used by Ollama calls
+_GROQ_MODEL = "llama-3.3-70b-versatile"
+
+
+def _groq_client() -> _OpenAI:
+    return _OpenAI(
+        api_key=settings.GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+    )
 
 
 def generate_summary(content: str | None, title: str, retries: int = 2) -> str | None:
@@ -65,86 +74,97 @@ Summary:"""
 
 
 def translate_to_arabic(text: str) -> str | None:
-    """Translate English text to Arabic using Ollama."""
+    """Translate English text to Arabic using Google Translate (unofficial free endpoint)."""
     if not text or len(text) < 5:
         return None
-
-    prompt = f"""Translate the following text to Arabic. Output only the translated text, nothing else.
-
-Text:
-{text[:1500]}
-
-Translation:"""
-
     try:
-        response = requests.post(
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 300},
-            },
-            timeout=_SUMMARY_TIMEOUT,
-        )
-        response.raise_for_status()
-        result = (response.json().get("response") or "").strip()
+        # Split into ≤4000-char chunks to stay within URL limits
+        chunks = [text[i:i + 4000] for i in range(0, len(text), 4000)]
+        parts = []
+        for chunk in chunks:
+            resp = requests.get(
+                "https://translate.googleapis.com/translate_a/single",
+                params={"client": "gtx", "sl": "en", "tl": "ar", "dt": "t", "q": chunk},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            parts.append("".join(seg[0] for seg in data[0] if seg[0]))
+        result = "".join(parts).strip()
         return result or None
     except Exception as exc:
         logger.warning("Translation failed: %s", exc)
         return None
 
 
-def generate_overall_summary(db, limit: int = 100) -> str | None:
+def generate_overall_summary(db, interest_vector: dict | None = None, limit: int = 100) -> str | None:
     """
-    Generate a single global digest across all categories using embedding similarity.
-    Clusters articles by embedding similarity (ignoring category), then synthesizes
-    the top themes into a coherent 2-3 paragraph overview.
+    Generate a personalized news brief in English using Groq.
+    If interest_vector is provided, articles are sorted by the user's category interest scores
+    so the brief leads with the topics the user cares most about.
     """
     from app.models.news import News
-    from app.recommender.embedder import Embedder
-    import numpy as np
 
     articles = db.query(News).filter(
         News.summary.isnot(None),
-        News.embedding.isnot(None),
     ).order_by(News.created_at.desc()).limit(limit).all()
 
     if len(articles) < 2:
         return None
 
-    embedder = Embedder()
+    if interest_vector:
+        # Sort articles by the user's interest score for their category (desc), recency as tiebreak
+        def _interest(a):
+            cat = (a.category or "other").lower().strip()
+            return interest_vector.get(cat, 0.0)
+        articles = sorted(articles, key=_interest, reverse=True)
 
-    # Aggregate all article summaries into one context
-    titles = [a.title for a in articles]
-    previews = [a.summary or a.description or "" for a in articles]
+        # Build prompt sections per category in interest order
+        seen_cats: list[str] = []
+        by_cat: dict[str, list] = {}
+        for a in articles:
+            cat = (a.category or "other").lower().strip()
+            if cat not in by_cat:
+                by_cat[cat] = []
+                seen_cats.append(cat)
+            by_cat[cat].append(a)
 
-    items = [f"- {t}: {p[:150]}" for t, p in zip(titles, previews)]
-    context = "\n".join(items[:30])  # cap at 30 for prompt length
+        sections: list[str] = []
+        for cat in seen_cats[:6]:  # top 6 categories
+            score = interest_vector.get(cat, 0.0)
+            n = max(2, round(score * 5))  # 5 articles for score=1.0, 2 for score=0.4
+            cat_articles = by_cat[cat][:n]
+            lines = [f"  - {a.title}: {(a.summary or '')[:120]}" for a in cat_articles]
+            sections.append(f"[{cat.capitalize()} — interest score {score:.1f}]\n" + "\n".join(lines))
+        context = "\n\n".join(sections)
 
-    prompt = f"""You are a world news analyst. Review the following headlines and summaries
-from the past period and write a concise 2-3 paragraph brief covering the most important
-global themes and developments. Synthesize across topics — don't just list items.
-Prioritize stories that have the broadest impact or most significance.
-
-Headlines & Summaries:
-{context}
-
-Global News Brief:"""
+        prompt = (
+            "You are a personalized news analyst. The sections below are ordered by the user's "
+            "interest level (highest first). Write a 3-4 paragraph news brief in English only "
+            "(absolutely no Arabic words). Lead with the highest-interest topics and give them "
+            "more detail. Lower-interest topics may be briefly mentioned at the end. "
+            "Synthesize — do not just list headlines.\n\n"
+            f"{context}\n\nPersonalized News Brief:"
+        )
+    else:
+        items = [f"- {a.title}: {(a.summary or '')[:150]}" for a in articles[:30]]
+        context = "\n".join(items)
+        prompt = (
+            "You are a world news analyst. Review the following headlines and summaries "
+            "and write a concise 2-3 paragraph brief in English only (no Arabic words). "
+            "Cover the most important global themes. Synthesize — do not just list items.\n\n"
+            f"Headlines & Summaries:\n{context}\n\nGlobal News Brief:"
+        )
 
     try:
-        response = requests.post(
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.3, "num_predict": 400},
-            },
-            timeout=_SUMMARY_TIMEOUT,
+        client = _groq_client()
+        resp = client.chat.completions.create(
+            model=_GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=700,
         )
-        response.raise_for_status()
-        digest = (response.json().get("response") or "").strip()
+        digest = (resp.choices[0].message.content or "").strip()
         if digest:
             logger.debug("Generated overall summary (%d chars)", len(digest))
         return digest or None

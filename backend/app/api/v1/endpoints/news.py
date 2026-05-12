@@ -1,13 +1,18 @@
 """News feed endpoints."""
 
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.api.deps import get_current_user
+from app.core.security import decode_token
 from app.models.user import User
 from app.services.news_service import news_service
 from app.tasks.scheduler import run_embed_job, run_scrape_job
+
+_optional_bearer = HTTPBearer(auto_error=False)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/news", tags=["news"])
@@ -71,15 +76,6 @@ def list_articles(page: int = 1, per_page: int = 50):
         ) from exc
 
 
-@router.get("/{article_id}")
-def get_article(article_id: int):
-    """GET /news/{article_id} — Return a single article by ID."""
-    article = news_service.get_article_by_id(article_id)
-    if article is None:
-        raise HTTPException(status_code=404, detail="Article not found")
-    return article
-
-
 @router.get("/search")
 def search_articles(
     q: str | None = None,
@@ -108,18 +104,29 @@ def search_articles(
 
 
 @router.get("/overall")
-def get_overall_summary():
+def get_overall_summary(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
+):
     """
     GET /news/overall
-    Returns a single AI-generated global digest across all categories.
+    Returns a personalized AI news brief ordered by the user's survey interest scores.
+    Auth is optional — unauthenticated callers get a generic global brief.
     """
+    user_id: Optional[int] = None
+    if credentials:
+        payload = decode_token(credentials.credentials)
+        if payload and payload.get("sub"):
+            try:
+                user_id = int(payload["sub"])
+            except (ValueError, TypeError):
+                pass
     try:
-        return {"summary": news_service.get_overall_summary()}
+        return {"summary": news_service.get_overall_summary(user_id=user_id)}
     except Exception as exc:
         logger.error("Overall summary failed: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Overall summary failed: {exc}",
+            detail="Overall summary generation failed.",
         ) from exc
 
 
@@ -144,6 +151,15 @@ def get_category_digests():
 def get_library(current_user: User = Depends(get_current_user)):
     """GET /news/library — Saved articles for the current user."""
     return news_service.get_saved_articles(current_user.id)
+
+
+@router.get("/{article_id}")
+def get_article(article_id: int):
+    """GET /news/{article_id} — Return a single article by ID."""
+    article = news_service.get_article_by_id(article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return article
 
 
 @router.get("/saved/{article_id}")

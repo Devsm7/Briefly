@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://ollama:11434"
     OLLAMA_MODEL: str = "mistral"
     OPENAI_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
 
     NEWS_API_KEY: str = ""
     NEWSDATA_API_KEY: str = ""
