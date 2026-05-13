@@ -183,10 +183,14 @@ if selected_article:
     with col_like:
         if st.button("", key="like_btn", icon=":material/thumb_up:"):
             st.session_state["reaction"] = "like" if st.session_state["reaction"] != "like" else None
+            if st.session_state.get("token") and st.session_state["reaction"] == "like":
+                api_client.post_interaction(selected_article["article_id"], "like")
 
     with col_dislike:
         if st.button("", key="dislike_btn", icon=":material/thumb_down:"):
             st.session_state["reaction"] = "dislike" if st.session_state["reaction"] != "dislike" else None
+            if st.session_state.get("token") and st.session_state["reaction"] == "dislike":
+                api_client.post_interaction(selected_article["article_id"], "dislike")
 
     with col_save:
         if st.button("", key="save_btn", icon=":material/bookmark:"):

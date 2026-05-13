@@ -24,6 +24,9 @@ class SurveyPreference(Base):
     # Derived weights for recommendation engine e.g. {"tech": 0.8, "politics": 0.6}
     interest_vector: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False, server_default="{}")
 
+    # Cached 384-dim user embedding. Null until first recommendations request; invalidated on survey change.
+    user_embedding: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+
     # 0 = skipped / partial, 1 = completed
     survey_completed: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
 

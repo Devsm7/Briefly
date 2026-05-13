@@ -73,17 +73,23 @@ def get_recommendations(
     ] if disliked_ids else []
 
     # Fallback — no likes yet: rank all articles by survey interest_vector
-    # Use AI-generated interest description as the base embedding
     if not liked_embeddings:
         all_articles = db.query(News).filter(News.summary.isnot(None)).all()
 
-        # Generate a natural-language interest description from the survey vector
-        interest_description = generate_user_interest_description(interest_vector)
-
-        if interest_description:
-            user_emb = embedder.embed_text(interest_description)
+        if survey and survey.user_embedding is not None:
+            user_emb = survey.user_embedding  # cache hit — no Groq call
         else:
-            user_emb = None
+            answers = survey.answers if survey else {}
+            interest_description = generate_user_interest_description(
+                interest_vector, answers=answers
+            )
+            if interest_description:
+                user_emb = embedder.embed_text(interest_description)
+                if survey:
+                    survey.user_embedding = user_emb  # persist for future requests
+                    db.commit()
+            else:
+                user_emb = None
 
         ranked = ranker.rank_articles(
             all_articles,

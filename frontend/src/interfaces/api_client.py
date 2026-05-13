@@ -182,6 +182,19 @@ def unsave_article(article_id: int) -> None:
     ))
 
 
+def post_interaction(article_id: int, action: str) -> None:
+    """Record a like or dislike — best-effort, never blocks the UI."""
+    try:
+        _handle(requests.post(
+            f"{BASE_URL}/api/v1/interactions",
+            json={"article_id": article_id, "action": action},
+            headers=_auth(),
+            timeout=_TIMEOUT,
+        ))
+    except Exception:
+        pass
+
+
 def check_saved(article_id: int) -> bool:
     try:
         data = _handle(requests.get(

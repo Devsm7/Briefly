@@ -162,6 +162,9 @@ class SurveyService:
             # Don't rollback — survey_preferences already succeeded
             db.commit()
 
+        # Invalidate cached embedding — regenerated on next recommendations request
+        survey.user_embedding = None
+
         db.commit()
         db.refresh(survey)
         return survey

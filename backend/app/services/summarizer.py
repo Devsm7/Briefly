@@ -12,6 +12,46 @@ logger = logging.getLogger(__name__)
 _SUMMARY_TIMEOUT = 240  # seconds — used by Ollama calls
 _GROQ_MODEL = "llama-3.3-70b-versatile"
 
+# Maps category name → the answers key holding its topic selections
+_TOPIC_QUESTION: dict[str, str] = {
+    "tech": "Q04", "politics": "Q07", "sport": "Q13",
+    "business": "Q15", "health": "Q19", "science": "Q22",
+}
+
+# Human-readable labels for survey topic codes
+_TOPIC_LABELS: dict[str, dict[str, str]] = {
+    "tech": {
+        "ai": "AI & Machine Learning", "cybersecurity": "Cybersecurity",
+        "startups": "Startups & Venture Capital", "electronics": "Consumer Electronics",
+        "software": "Software & Apps", "science": "Science & Space",
+    },
+    "politics": {
+        "domestic": "Domestic Politics", "international": "International Relations",
+        "elections": "Elections", "economic": "Economic Policy",
+        "social": "Social Policy", "environment": "Environmental Policy",
+    },
+    "sport": {
+        "football": "Football", "basketball": "Basketball", "f1": "Formula 1",
+        "tennis": "Tennis", "cricket": "Cricket", "athletics": "Athletics",
+        "rugby": "Rugby", "baseball": "Baseball",
+    },
+    "business": {
+        "markets": "Financial Markets", "crypto": "Cryptocurrency",
+        "entrepreneurship": "Entrepreneurship", "real_estate": "Real Estate",
+        "personal_finance": "Personal Finance", "economy": "Global Economy",
+    },
+    "health": {
+        "mental_health": "Mental Health", "nutrition": "Nutrition",
+        "fitness": "Fitness & Exercise", "medical_research": "Medical Research",
+        "public_health": "Public Health", "longevity": "Longevity",
+    },
+    "science": {
+        "space": "Space & Astronomy", "physics": "Physics", "biology": "Biology",
+        "climate": "Climate Science", "tech_science": "Emerging Technology",
+        "archaeology": "Archaeology",
+    },
+}
+
 
 def _groq_client() -> _OpenAI:
     return _OpenAI(
@@ -173,31 +213,40 @@ def generate_overall_summary(db, interest_vector: dict | None = None, limit: int
         return None
 
 
-def generate_user_interest_description(interest_vector: dict[str, float]) -> str | None:
+def generate_user_interest_description(
+    interest_vector: dict[str, float],
+    answers: dict | None = None,
+) -> str | None:
     """
-    Generate a 1-2 sentence natural language description of a user's interests
-    from their category interest vector. Used to create an initial semantic
-    embedding before the user has any article interactions.
+    Generate a 1-2 sentence natural language description of a user's interests.
+    Uses subcategory topic selections from `answers` for a specific, YouTube/X-style profile.
+    Falls back to category-only description if answers are not provided.
     """
     if not interest_vector:
         return None
 
-    # Sort categories by weight descending
     sorted_cats = sorted(interest_vector.items(), key=lambda x: x[1], reverse=True)
     top_cats = [(cat, weight) for cat, weight in sorted_cats if weight > 0.1]
 
     if not top_cats:
         return None
 
-    cat_lines = [f"  - {cat}: {weight:.1f}" for cat, weight in top_cats]
-    context = "\n".join(cat_lines)
+    lines = []
+    for cat, weight in top_cats:
+        topic_codes = (answers or {}).get(_TOPIC_QUESTION.get(cat, ""), [])
+        if isinstance(topic_codes, list):
+            labels = [_TOPIC_LABELS.get(cat, {}).get(code, code) for code in topic_codes]
+        else:
+            labels = []
+        topic_str = f": {', '.join(labels)}" if labels else ""
+        lines.append(f"  - {cat} (interest {weight:.1f}){topic_str}")
+    context = "\n".join(lines)
 
-    prompt = f"""You are a user interest profiler. A user has provided the following interests.
-Generate a concise 1-2 sentence description of who this user is and what they care about.
-Write it in the third person, as if describing a person profile.
-Be specific about the topics and tone, not generic.
+    prompt = f"""You are a user interest profiler. A user selected the following interest categories
+and specific topics within each. Write a concise 1-2 sentence profile in third person.
+Name the actual subtopics, not just the categories.
 
-Interest categories and weights:
+User interests:
 {context}
 
 User interest profile:"""

@@ -1,21 +1,10 @@
 """Build and update the user interest vector from survey and feedback signals."""
 
-# TODO: Import numpy, SurveyPreference, UserInteraction, Article models
-# Category ordering (index) used in the vector:
-# CATEGORIES = ["tech", "business", "politics", "sports"]
+_DELTA = 0.05
 
 
 class InterestVector:
     """Computes and maintains a per-user interest profile vector."""
-
-    def build_from_survey(self, categories: list[str]) -> dict[str, float]:
-        """
-        Create an initial interest_vector dict from onboarding survey answers.
-        Selected categories get equal weight; unselected get near-zero weight.
-        Example → {"tech": 0.5, "business": 0.5, "politics": 0.0, "sports": 0.0}
-        """
-        # TODO: distribute weight equally among selected categories
-        raise NotImplementedError
 
     def update_from_feedback(
         self,
@@ -24,16 +13,29 @@ class InterestVector:
         action: str,
     ) -> dict[str, float]:
         """
-        Re-weight the interest vector based on a single feedback action.
-        - "like" / "more_like_this"  → increase category weight by delta
-        - "dislike" / "less_like_this" → decrease category weight by delta
-        Normalize the resulting weights so they sum to 1.0.
+        Adjust the category weight for a single like/dislike action.
+        Like → +0.05 (capped at 1.0), Dislike → -0.05 (floor 0.0).
         """
-        # TODO: define DELTA = 0.05
-        # TODO: adjust, clamp to [0.0, 1.0], normalize
-        raise NotImplementedError
+        vector = dict(current_vector)
+        cat = (article_category or "").lower().strip()
+        if not cat:
+            return vector
+        current = vector.get(cat, 0.5)
+        if action in ("like", "more_like_this"):
+            vector[cat] = min(1.0, current + _DELTA)
+        elif action in ("dislike", "less_like_this"):
+            vector[cat] = max(0.0, current - _DELTA)
+        return vector
 
-    def save_to_db(self, db, user_id: int, vector: dict[str, float]):
-        """Persist the updated interest_vector JSON to SurveyPreference."""
-        # TODO: update SurveyPreference.interest_vector for user_id
-        raise NotImplementedError
+    def save_to_db(self, db, user_id: int, vector: dict[str, float]) -> None:
+        """Persist the updated interest_vector to SurveyPreference."""
+        from app.models.survey import SurveyPreference
+        survey = db.query(SurveyPreference).filter(
+            SurveyPreference.user_id == user_id
+        ).first()
+        if survey:
+            survey.interest_vector = vector
+            db.commit()
+
+
+interest_vector_svc = InterestVector()
