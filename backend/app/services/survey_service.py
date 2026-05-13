@@ -162,8 +162,15 @@ class SurveyService:
             # Don't rollback — survey_preferences already succeeded
             db.commit()
 
-        # Invalidate cached embedding — regenerated on next recommendations request
-        survey.user_embedding = None
+        # Pre-generate user embedding from survey topics so first recommendations request is instant
+        try:
+            from app.recommender.embedder import embedder
+            from app.services.summarizer import generate_user_interest_description
+            description = generate_user_interest_description(interest_vector, answers=payload.answers)
+            survey.user_embedding = embedder.embed_text(description) if description else None
+        except Exception as exc:
+            logger.warning("[survey] Could not pre-generate user embedding: %s", exc)
+            survey.user_embedding = None
 
         db.commit()
         db.refresh(survey)

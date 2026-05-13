@@ -135,7 +135,7 @@ def get_recommendations(page: int = 1, per_page: int = 50) -> dict:
         f"{BASE_URL}/api/v1/recommendations",
         params={"page": page, "per_page": per_page},
         headers=_auth(),
-        timeout=60,
+        timeout=180,
     ))
 
 
