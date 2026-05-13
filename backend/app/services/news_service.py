@@ -30,13 +30,23 @@ from app.services.summarizer import generate_category_summary
 def build_user_embedding_from_categories(
     db: Session,
     interest_vector: dict[str, float],
+    answers: dict | None = None,
     articles_per_cat: int = 20,
 ) -> list[float] | None:
     """
     Build a cold-start user embedding from existing article embeddings in the DB.
-    Computes a weighted average of recent article embeddings per category,
-    weighted by the user's interest score. No Groq call required.
+
+    When the user has selected subtopics (e.g. tech → cybersecurity), articles in that
+    category are scored by cosine similarity to the topic labels and the most relevant
+    ones are used — so cybersecurity articles dominate over generic tech noise.
+    Falls back to most-recent articles when no subtopics are selected.
     """
+    from app.recommender.embedder import embedder
+    from app.recommender.ranker import Ranker
+    from app.services.summarizer import _TOPIC_LABELS, _TOPIC_QUESTION
+
+    ranker = Ranker()
+
     if not interest_vector:
         return None
 
@@ -46,17 +56,31 @@ def build_user_embedding_from_categories(
     for cat, weight in interest_vector.items():
         if weight <= 0.1:
             continue
+
+        # Fetch a larger pool — we'll re-rank by topic similarity below
         articles = (
             db.query(News)
             .filter(News.category == cat, News.embedding.isnot(None))
             .order_by(News.created_at.desc())
-            .limit(articles_per_cat)
+            .limit(200)
             .all()
         )
         if not articles:
             continue
 
-        cat_embs = np.array([a.embedding for a in articles], dtype=float)
+        # If user picked subtopics, find articles closest to those topics
+        topic_codes = (answers or {}).get(_TOPIC_QUESTION.get(cat, ""), [])
+        if topic_codes and isinstance(topic_codes, list):
+            labels = [_TOPIC_LABELS.get(cat, {}).get(code, code) for code in topic_codes]
+            topic_emb = embedder.embed_text(" ".join(labels))
+            articles = sorted(
+                articles,
+                key=lambda a: ranker.cosine_similarity(topic_emb, a.embedding),
+                reverse=True,
+            )
+
+        selected = articles[:articles_per_cat]
+        cat_embs = np.array([a.embedding for a in selected], dtype=float)
         cat_mean = cat_embs.mean(axis=0)
 
         weighted_sum = (weight * cat_mean) if weighted_sum is None else (weighted_sum + weight * cat_mean)

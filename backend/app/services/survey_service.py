@@ -165,7 +165,9 @@ class SurveyService:
         # Pre-generate user embedding from existing article embeddings in DB
         try:
             from app.services.news_service import build_user_embedding_from_categories
-            survey.user_embedding = build_user_embedding_from_categories(db, interest_vector)
+            survey.user_embedding = build_user_embedding_from_categories(
+                db, interest_vector, answers=payload.answers
+            )
         except Exception as exc:
             logger.warning("[survey] Could not pre-generate user embedding: %s", exc)
             survey.user_embedding = None

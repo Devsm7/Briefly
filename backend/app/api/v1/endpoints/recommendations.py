@@ -77,8 +77,9 @@ def get_recommendations(
         if survey and survey.user_embedding is not None:
             user_emb = survey.user_embedding  # cache hit
         else:
-            # Build from existing article embeddings in DB — no Groq call needed
-            user_emb = build_user_embedding_from_categories(db, interest_vector)
+            # Build from existing article embeddings — topic-aware, no Groq call
+            answers = survey.answers if survey else {}
+            user_emb = build_user_embedding_from_categories(db, interest_vector, answers=answers)
             if survey and user_emb:
                 survey.user_embedding = user_emb
                 db.commit()
