@@ -21,24 +21,31 @@ _TOPIC_QUESTION: dict[str, str] = {
 # Human-readable labels for survey topic codes
 _TOPIC_LABELS: dict[str, dict[str, str]] = {
     "tech": {
-        "ai": "AI & Machine Learning", "cybersecurity": "Cybersecurity",
-        "startups": "Startups & Venture Capital", "electronics": "Consumer Electronics",
-        "software": "Software & Apps", "science": "Science & Space",
+        "artificial_intelligence": "Artificial Intelligence",
+        "cybersecurity": "Cybersecurity",
+        "cloud_computing": "Cloud Computing",
+        "data_management": "Data Management",
+        "technology_infrastructure": "Technology Infrastructure",
     },
     "politics": {
-        "domestic": "Domestic Politics", "international": "International Relations",
-        "elections": "Elections", "economic": "Economic Policy",
-        "social": "Social Policy", "environment": "Environmental Policy",
+        "election_politics": "Election Politics",
+        "executive_policy": "Executive Policy",
+        "maritime_security": "Maritime Security",
+        "disability_rights": "Disability Rights",
     },
     "sport": {
-        "football": "Football", "basketball": "Basketball", "f1": "Formula 1",
-        "tennis": "Tennis", "cricket": "Cricket", "athletics": "Athletics",
-        "rugby": "Rugby", "baseball": "Baseball",
+        "american_football": "American Football",
+        "basketball": "Basketball",
+        "baseball": "Baseball",
+        "soccer": "Soccer",
+        "combat_sports": "Combat Sports",
     },
     "business": {
-        "markets": "Financial Markets", "crypto": "Cryptocurrency",
-        "entrepreneurship": "Entrepreneurship", "real_estate": "Real Estate",
-        "personal_finance": "Personal Finance", "economy": "Global Economy",
+        "earnings_reports": "Earnings Reports",
+        "financial_markets": "Financial Markets",
+        "company_performance": "Company Performance",
+        "investment_strategies": "Investment Strategies",
+        "industry_trends": "Industry Trends",
     },
     "health": {
         "mental_health": "Mental Health", "nutrition": "Nutrition",
