@@ -322,7 +322,7 @@ with lcol:
                 st.rerun()
     with skip_col:
         if st.button("Skip", use_container_width=True):
-            for k in ["survey_step", "survey_categories", "survey_answers"]:
+            for k in ["survey_step", "survey_categories", "survey_answers", "recommendations_cache"]:
                 st.session_state.pop(k, None)
             st.switch_page("pages/ForYou.py")
 
@@ -336,7 +336,7 @@ with rcol:
                         categories=st.session_state["survey_categories"],
                         answers=st.session_state["survey_answers"],
                     )
-                    for k in ["survey_step", "survey_categories", "survey_answers"]:
+                    for k in ["survey_step", "survey_categories", "survey_answers", "recommendations_cache"]:
                         st.session_state.pop(k, None)
                     st.switch_page("pages/ForYou.py")
                 except RuntimeError as e:
