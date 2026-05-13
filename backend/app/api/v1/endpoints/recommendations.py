@@ -11,9 +11,7 @@ from app.models.survey import SurveyPreference
 from app.models.user import User
 from app.models.user_interaction import UserInteraction
 from app.recommender.ranker import Ranker
-from app.recommender.embedder import embedder
-from app.services.news_service import article_to_dict
-from app.services.summarizer import generate_user_interest_description
+from app.services.news_service import article_to_dict, build_user_embedding_from_categories
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -77,19 +75,13 @@ def get_recommendations(
         all_articles = db.query(News).filter(News.summary.isnot(None)).all()
 
         if survey and survey.user_embedding is not None:
-            user_emb = survey.user_embedding  # cache hit — no Groq call
+            user_emb = survey.user_embedding  # cache hit
         else:
-            answers = survey.answers if survey else {}
-            interest_description = generate_user_interest_description(
-                interest_vector, answers=answers
-            )
-            if interest_description:
-                user_emb = embedder.embed_text(interest_description)
-                if survey:
-                    survey.user_embedding = user_emb  # persist for future requests
-                    db.commit()
-            else:
-                user_emb = None
+            # Build from existing article embeddings in DB — no Groq call needed
+            user_emb = build_user_embedding_from_categories(db, interest_vector)
+            if survey and user_emb:
+                survey.user_embedding = user_emb
+                db.commit()
 
         ranked = ranker.rank_articles(
             all_articles,

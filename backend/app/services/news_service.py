@@ -18,12 +18,55 @@ NOTE ON EMBEDDINGS (not yet implemented):
 
 from collections import defaultdict
 
+import numpy as np
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.news import News
 from app.models.save_article import SavedArticle
 from app.services.summarizer import generate_category_summary
+
+
+def build_user_embedding_from_categories(
+    db: Session,
+    interest_vector: dict[str, float],
+    articles_per_cat: int = 20,
+) -> list[float] | None:
+    """
+    Build a cold-start user embedding from existing article embeddings in the DB.
+    Computes a weighted average of recent article embeddings per category,
+    weighted by the user's interest score. No Groq call required.
+    """
+    if not interest_vector:
+        return None
+
+    weighted_sum = None
+    total_weight = 0.0
+
+    for cat, weight in interest_vector.items():
+        if weight <= 0.1:
+            continue
+        articles = (
+            db.query(News)
+            .filter(News.category == cat, News.embedding.isnot(None))
+            .order_by(News.created_at.desc())
+            .limit(articles_per_cat)
+            .all()
+        )
+        if not articles:
+            continue
+
+        cat_embs = np.array([a.embedding for a in articles], dtype=float)
+        cat_mean = cat_embs.mean(axis=0)
+
+        weighted_sum = (weight * cat_mean) if weighted_sum is None else (weighted_sum + weight * cat_mean)
+        total_weight += weight
+
+    if weighted_sum is None or total_weight == 0:
+        return None
+
+    norm = np.linalg.norm(weighted_sum)
+    return (weighted_sum / norm).tolist() if norm > 0 else weighted_sum.tolist()
 
 
 def article_to_dict(article: News) -> dict:

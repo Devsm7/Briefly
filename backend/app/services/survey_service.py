@@ -162,12 +162,10 @@ class SurveyService:
             # Don't rollback — survey_preferences already succeeded
             db.commit()
 
-        # Pre-generate user embedding from survey topics so first recommendations request is instant
+        # Pre-generate user embedding from existing article embeddings in DB
         try:
-            from app.recommender.embedder import embedder
-            from app.services.summarizer import generate_user_interest_description
-            description = generate_user_interest_description(interest_vector, answers=payload.answers)
-            survey.user_embedding = embedder.embed_text(description) if description else None
+            from app.services.news_service import build_user_embedding_from_categories
+            survey.user_embedding = build_user_embedding_from_categories(db, interest_vector)
         except Exception as exc:
             logger.warning("[survey] Could not pre-generate user embedding: %s", exc)
             survey.user_embedding = None
