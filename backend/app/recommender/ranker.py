@@ -30,7 +30,6 @@ class Ranker:
         date_str = getattr(article, "published_date", None)
         if date_str:
             try:
-                # NewsData.io publishes ISO-8601 strings like "2026-05-07T14:30:00Z"
                 pub = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 pub = None
@@ -50,14 +49,7 @@ class Ranker:
         return float(max(0.0, np.exp(-decay_lambda * age_hours)))
 
     def _interest_score(self, article, user_embedding, interest_vector: dict[str, float]) -> float:
-        """
-        Combined semantic + category interest score (0-1).
 
-        - If user_embedding is available AND article has embedding → cosine similarity × category_weight
-        - If user_embedding is None but interest_vector has weights → use category_weight only
-          (survey-only ranking, used for new users with no likes)
-        - If neither → neutral 0.5
-        """
         category_weight = interest_vector.get(getattr(article, "category", ""), 0.5)
         embedding = getattr(article, "embedding", None)
 
