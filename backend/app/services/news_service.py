@@ -53,6 +53,20 @@ _TOPIC_SEARCH_TERMS: dict[str, list[str]] = {
     "company_performance":     ["shares", "ceo", "board of directors", "market cap", "valuation", "acquisition"],
     "investment_strategies":   ["investment", "portfolio", "hedge fund", "venture capital", "asset management"],
     "industry_trends":         ["industry trend", "market growth", "disruption", "sector outlook", "forecast"],
+    # health
+    "mental_health":           ["mental health", "depression", "anxiety", "therapy", "psychiatry", "wellbeing", "stress"],
+    "nutrition":               ["nutrition", "diet", "calories", "vitamins", "food health", "dietary", "eating habits"],
+    "fitness":                 ["fitness", "exercise", "workout", "gym", "physical activity", "training", "weight loss"],
+    "medical_research":        ["medical research", "clinical trial", "drug approval", "fda", "treatment", "medicine", "cure"],
+    "public_health":           ["public health", "pandemic", "epidemic", "vaccination", "cdc", "who ", "disease outbreak"],
+    "longevity":               ["longevity", "aging", "lifespan", "anti-aging", "life expectancy", "elderly", "dementia"],
+    # science
+    "space":                   ["space", "nasa", "rocket", "satellite", "mars", "moon", "astronaut", "orbit", "galaxy"],
+    "physics":                 ["physics", "quantum", "particle", "atom", "nuclear", "relativity", "cern", "laser"],
+    "biology":                 ["biology", "genetics", "dna", "evolution", "species", "cell", "organism", "genome"],
+    "climate":                 ["climate change", "global warming", "carbon", "emissions", "greenhouse", "sea level", "ipcc"],
+    "tech_science":            ["engineering", "robotics", "nanotechnology", "materials science", "3d printing", "biotech"],
+    "archaeology":             ["archaeology", "fossil", "ancient", "excavation", "artifact", "prehistoric", "civilization"],
 }
 
 
