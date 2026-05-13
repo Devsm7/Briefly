@@ -26,6 +26,54 @@ from app.models.news import News
 from app.models.save_article import SavedArticle
 from app.services.summarizer import generate_category_summary
 
+# Keyword sets per topic code — used to reliably filter articles to a subtopic.
+# Single-word embedding similarity is too weak to distinguish e.g. basketball vs soccer
+# because all sports articles are semantically close. Keyword matching is precise.
+_TOPIC_SEARCH_TERMS: dict[str, list[str]] = {
+    # tech
+    "artificial_intelligence": ["artificial intelligence", "machine learning", "deep learning", " ai ", "chatgpt", "llm", "neural network", "generative ai"],
+    "cybersecurity":           ["cybersecurity", "cyber security", "hacking", "malware", "ransomware", "data breach", "phishing", "vulnerability"],
+    "cloud_computing":         ["cloud computing", "aws", "azure", "google cloud", "saas", "cloud service", "cloud platform"],
+    "data_management":         ["data management", "database", "big data", "data analytics", "data warehouse", "data storage"],
+    "technology_infrastructure": ["infrastructure", "semiconductor", "chip", "server farm", "data center", "broadband", "5g"],
+    # sport
+    "american_football":       ["nfl", "american football", "quarterback", "touchdown", "super bowl", "gridiron"],
+    "basketball":              ["basketball", "nba", "three-point", "slam dunk", "point guard", "playoffs"],
+    "baseball":                ["baseball", "mlb", "pitcher", "home run", "innings", "world series"],
+    "soccer":                  ["soccer", "premier league", "champions league", "fifa", "la liga", "bundesliga", "mls"],
+    "combat_sports":           ["ufc", "boxing", "mma", "wrestling", "knockout", "bout", "heavyweight"],
+    # politics
+    "election_politics":       ["election", "vote", "ballot", "campaign", "primary", "polling", "candidate"],
+    "executive_policy":        ["executive order", "white house", "president", "administration", "oval office"],
+    "maritime_security":       ["maritime", "shipping lane", "strait", "naval", "sea route", "piracy"],
+    "disability_rights":       ["disability", "disabled", "accessibility", "ada", "wheelchair", "impairment"],
+    # business
+    "earnings_reports":        ["earnings", "revenue", "quarterly results", "eps", "guidance", "profit"],
+    "financial_markets":       ["stock market", "wall street", "dow jones", "s&p 500", "nasdaq", "trading"],
+    "company_performance":     ["shares", "ceo", "board of directors", "market cap", "valuation", "acquisition"],
+    "investment_strategies":   ["investment", "portfolio", "hedge fund", "venture capital", "asset management"],
+    "industry_trends":         ["industry trend", "market growth", "disruption", "sector outlook", "forecast"],
+}
+
+
+def _filter_articles_by_topic(articles: list, codes: list[str]) -> list:
+    """
+    Return articles whose title or summary contains at least one keyword for any
+    of the given topic codes. Falls back to the full list if fewer than 3 match.
+    """
+    all_terms: list[str] = []
+    for code in codes:
+        all_terms.extend(_TOPIC_SEARCH_TERMS.get(code, [code.replace("_", " ")]))
+
+    matched = [
+        a for a in articles
+        if any(
+            term in (a.title or "").lower() or term in (a.summary or "").lower()
+            for term in all_terms
+        )
+    ]
+    return matched if len(matched) >= 3 else articles
+
 
 def build_user_embedding_from_categories(
     db: Session,
@@ -36,16 +84,12 @@ def build_user_embedding_from_categories(
     """
     Build a cold-start user embedding from existing article embeddings in the DB.
 
-    When the user has selected subtopics (e.g. tech → cybersecurity), articles in that
-    category are scored by cosine similarity to the topic labels and the most relevant
-    ones are used — so cybersecurity articles dominate over generic tech noise.
+    When the user has selected subtopics (e.g. sport → basketball), articles in that
+    category are keyword-filtered to only match the selected subtopics before averaging.
+    This ensures a basketball user gets a basketball embedding, not a generic sport one.
     Falls back to most-recent articles when no subtopics are selected.
     """
-    from app.recommender.embedder import embedder
-    from app.recommender.ranker import Ranker
-    from app.services.summarizer import _TOPIC_LABELS, _TOPIC_QUESTION
-
-    ranker = Ranker()
+    from app.services.summarizer import _TOPIC_QUESTION
 
     if not interest_vector:
         return None
@@ -57,7 +101,6 @@ def build_user_embedding_from_categories(
         if weight <= 0.1:
             continue
 
-        # Fetch a larger pool — we'll re-rank by topic similarity below
         articles = (
             db.query(News)
             .filter(News.category == cat, News.embedding.isnot(None))
@@ -68,16 +111,10 @@ def build_user_embedding_from_categories(
         if not articles:
             continue
 
-        # If user picked subtopics, find articles closest to those topics
+        # Narrow to subtopic-relevant articles via keyword matching
         topic_codes = (answers or {}).get(_TOPIC_QUESTION.get(cat, ""), [])
         if topic_codes and isinstance(topic_codes, list):
-            labels = [_TOPIC_LABELS.get(cat, {}).get(code, code) for code in topic_codes]
-            topic_emb = embedder.embed_text(" ".join(labels))
-            articles = sorted(
-                articles,
-                key=lambda a: ranker.cosine_similarity(topic_emb, a.embedding),
-                reverse=True,
-            )
+            articles = _filter_articles_by_topic(articles, topic_codes)
 
         selected = articles[:articles_per_cat]
         cat_embs = np.array([a.embedding for a in selected], dtype=float)
