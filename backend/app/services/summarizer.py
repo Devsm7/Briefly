@@ -173,52 +173,6 @@ def generate_overall_summary(db, interest_vector: dict | None = None, limit: int
         return None
 
 
-def generate_user_interest_description(interest_vector: dict[str, float]) -> str | None:
-    """
-    Generate a 1-2 sentence natural language description of a user's interests
-    from their category interest vector. Used to create an initial semantic
-    embedding before the user has any article interactions.
-    """
-    if not interest_vector:
-        return None
-
-    # Sort categories by weight descending
-    sorted_cats = sorted(interest_vector.items(), key=lambda x: x[1], reverse=True)
-    top_cats = [(cat, weight) for cat, weight in sorted_cats if weight > 0.1]
-
-    if not top_cats:
-        return None
-
-    cat_lines = [f"  - {cat}: {weight:.1f}" for cat, weight in top_cats]
-    context = "\n".join(cat_lines)
-
-    prompt = f"""You are a user interest profiler. A user has provided the following interests.
-Generate a concise 1-2 sentence description of who this user is and what they care about.
-Write it in the third person, as if describing a person profile.
-Be specific about the topics and的语气 (tone), not generic.
-
-Interest categories and weights:
-{context}
-
-User interest profile:"""
-
-    try:
-        client = _groq_client()
-        resp = client.chat.completions.create(
-            model=_GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=150,
-        )
-        description = (resp.choices[0].message.content or "").strip()
-        if description:
-            logger.debug("Generated interest description: %s", description)
-        return description or None
-    except Exception as exc:
-        logger.warning("Interest description generation failed: %s", exc)
-        return None
-
-
 def generate_category_summary(articles: list[dict], category: str) -> str | None:
     """
     Generate a single overall summary for all articles in a category.

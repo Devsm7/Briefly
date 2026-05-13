@@ -11,10 +11,15 @@ from app.models.survey import SurveyPreference
 from app.models.user import User
 from app.models.user_interaction import UserInteraction
 from app.recommender.ranker import Ranker
-from app.recommender.embedder import embedder
 from app.services.news_service import article_to_dict
-from app.services.summarizer import generate_user_interest_description
 from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.models.news import News
+from app.models.survey import SurveyPreference
+from app.models.user import User
+from app.models.user_interaction import UserInteraction
+from app.recommender.ranker import Ranker
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -73,21 +78,11 @@ def get_recommendations(
     ] if disliked_ids else []
 
     # Fallback — no likes yet: rank all articles by survey interest_vector
-    # Use AI-generated interest description as the base embedding
     if not liked_embeddings:
         all_articles = db.query(News).filter(News.summary.isnot(None)).all()
-
-        # Generate a natural-language interest description from the survey vector
-        interest_description = generate_user_interest_description(interest_vector)
-
-        if interest_description:
-            user_emb = embedder.embed_text(interest_description)
-        else:
-            user_emb = None
-
         ranked = ranker.rank_articles(
             all_articles,
-            user_embedding=user_emb,
+            user_embedding=None,   # no personal embedding yet
             interest_vector=interest_vector,
             top_k=1000,
         )
