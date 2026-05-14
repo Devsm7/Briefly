@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.user_interaction import UserInteraction
 from app.recommender.interest_vector import interest_vector_svc
 from app.schemas.interaction import InteractionCreate, InteractionOut
+from app.api.v1.endpoints.recommendations import invalidate_recs_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/interactions", tags=["interactions"])
@@ -68,5 +69,10 @@ def log_interaction(
 
     db.commit()
     db.refresh(interaction)
+
+    # Force fresh rankings on the next recommendations request
+    if payload.action in ("like", "dislike"):
+        invalidate_recs_cache(current_user.id)
+
     logger.debug("Recorded %s interaction: user=%d article=%d", payload.action, current_user.id, payload.article_id)
     return interaction

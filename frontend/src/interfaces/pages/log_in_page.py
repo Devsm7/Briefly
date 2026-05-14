@@ -1,9 +1,7 @@
-import streamlit as st
-import sys
-import os
-
+import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 
+import streamlit as st
 import api_client
 
 st.set_page_config(layout="centered")

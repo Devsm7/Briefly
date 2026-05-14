@@ -10,7 +10,7 @@ class Ranker:
     # Half-life in hours: articles lose half their recency score after this long
     RECENCY_HALF_LIFE_HOURS: float = 24.0
     # Balance weight: 0.0 = pure interest, 1.0 = pure recency
-    TIME_BOOST: float = 0.35
+    TIME_BOOST: float = 0.20
 
     def cosine_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
         a = np.array(vec_a)
@@ -48,19 +48,35 @@ class Ranker:
         age_hours = (datetime.now(timezone.utc) - pub).total_seconds() / 3600
         return float(max(0.0, np.exp(-decay_lambda * age_hours)))
 
-    def _interest_score(self, article, user_embedding, interest_vector: dict[str, float]) -> float:
-
+    def _interest_score(
+        self,
+        article,
+        user_embedding,
+        interest_vector: dict[str, float],
+        topic_keywords: list[str] | None = None,
+    ) -> float:
         category_weight = interest_vector.get(getattr(article, "category", ""), 0.5)
         embedding = getattr(article, "embedding", None)
 
         if embedding and user_embedding is not None:
             semantic = self.cosine_similarity(embedding, user_embedding)
-            return semantic * category_weight
+            base = semantic * category_weight
+        elif interest_vector:
+            base = category_weight
+        else:
+            base = 0.5
 
-        if interest_vector:  # survey exists but no embedding yet
-            return category_weight
+        # Keyword boost: cosine diff within same category is ~0.05 — too small to overcome
+        # recency. Explicit keyword match on user-selected subtopics is reliable.
+        if topic_keywords:
+            text = (
+                (getattr(article, "title", "") or "") + " " +
+                (getattr(article, "summary", "") or "")
+            ).lower()
+            if any(term in text for term in topic_keywords):
+                base = min(1.0, base + 0.25)
 
-        return 0.5  # no survey, no embedding — neutral
+        return base
 
     def rank_articles(
         self,
@@ -68,6 +84,7 @@ class Ranker:
         user_embedding,
         interest_vector: dict[str, float],
         top_k: int = 20,
+        topic_keywords: list[str] | None = None,
     ) -> list:
         """
         Rank articles by balancing interest alignment and recency.
@@ -76,7 +93,7 @@ class Ranker:
         """
         scored = []
         for article in articles:
-            interest = self._interest_score(article, user_embedding, interest_vector)
+            interest = self._interest_score(article, user_embedding, interest_vector, topic_keywords)
             recency = self._recency_score(article)
             score = (1 - self.TIME_BOOST) * interest + self.TIME_BOOST * recency
             scored.append((score, article))

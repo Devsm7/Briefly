@@ -271,7 +271,6 @@ else:
         st.markdown(f'<div class="q-block"><p class="q-text">{q["text"]}</p>', unsafe_allow_html=True)
 
         if q["type"] == "multi":
-            current_vals = st.session_state["survey_answers"].get(q["id"], [])
             opts = q["options"]
 
             # Two-column checkbox layout
@@ -279,6 +278,8 @@ else:
                 row_opts = opts[i : i + 2]
                 opt_cols = st.columns(2)
                 for oc, (label, value) in enumerate(row_opts):
+                    # Re-read on every iteration so changes from earlier checkboxes are visible
+                    current_vals = st.session_state["survey_answers"].get(q["id"], [])
                     checked = value in current_vals
                     with opt_cols[oc]:
                         if st.checkbox(f"  {label}", value=checked, key=f"cb_{q['id']}_{value}"):

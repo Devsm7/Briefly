@@ -133,10 +133,9 @@ st.markdown("""
 if st.button("", key="back_btn", icon=":material/arrow_back:"):
     st.switch_page("pages/ForYou.py")
 
-if "reaction" not in st.session_state:
-    st.session_state["reaction"] = None
-if "save" not in st.session_state:
-    st.session_state["save"] = False
+reaction_key = f"reaction_{selected_id}"
+if reaction_key not in st.session_state:
+    st.session_state[reaction_key] = None
 
 selected_article = None
 if selected_id:
@@ -182,14 +181,14 @@ if selected_article:
 
     with col_like:
         if st.button("", key="like_btn", icon=":material/thumb_up:"):
-            st.session_state["reaction"] = "like" if st.session_state["reaction"] != "like" else None
-            if st.session_state.get("token") and st.session_state["reaction"] == "like":
+            st.session_state[reaction_key] = "like" if st.session_state[reaction_key] != "like" else None
+            if st.session_state.get("token") and st.session_state[reaction_key] == "like":
                 api_client.post_interaction(selected_article["article_id"], "like")
 
     with col_dislike:
         if st.button("", key="dislike_btn", icon=":material/thumb_down:"):
-            st.session_state["reaction"] = "dislike" if st.session_state["reaction"] != "dislike" else None
-            if st.session_state.get("token") and st.session_state["reaction"] == "dislike":
+            st.session_state[reaction_key] = "dislike" if st.session_state[reaction_key] != "dislike" else None
+            if st.session_state.get("token") and st.session_state[reaction_key] == "dislike":
                 api_client.post_interaction(selected_article["article_id"], "dislike")
 
     with col_save:
@@ -207,9 +206,9 @@ if selected_article:
                     is_saved = True
 
     # Button highlight styles
-    if st.session_state["reaction"] == "like":
+    if st.session_state[reaction_key] == "like":
         st.markdown("<style>.st-key-like_btn button { background: #28a745 !important; }</style>", unsafe_allow_html=True)
-    elif st.session_state["reaction"] == "dislike":
+    elif st.session_state[reaction_key] == "dislike":
         st.markdown("<style>.st-key-dislike_btn button { background: #dc3545 !important; }</style>", unsafe_allow_html=True)
 
     if is_saved:

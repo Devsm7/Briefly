@@ -7,16 +7,10 @@ import api_client, styles
 st.set_page_config(page_title="Sign Up — Briefly", layout="centered")
 styles.inject()
 
-st.markdown('<div class="auth-bg auth-bg-purple">', unsafe_allow_html=True)
+st.title("Create an account")
+st.write("Join Briefly and get personalised news")
 
 with st.container():
-    st.markdown("""
-        <div class="card">
-            <p class="card-title">Create an account</p>
-            <p class="card-desc">Join Briefly and get personalised news</p>
-        </div>
-    """, unsafe_allow_html=True)
-
     username   = st.text_input("Username",   placeholder="janedoe",  key="reg_username")
     first_name = st.text_input("First Name", placeholder="Jane",     key="reg_first_name")
     last_name  = st.text_input("Last Name",  placeholder="Doe",      key="reg_last_name")
@@ -65,5 +59,3 @@ with st.container():
     st.markdown("Already have an account?")
     if st.button("Sign in →"):
         st.switch_page("pages/log_in_page.py")
-
-st.markdown("</div>", unsafe_allow_html=True)

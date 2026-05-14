@@ -7,6 +7,7 @@ from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.survey import SurveyOut, SurveySubmit
 from app.services.survey_service import survey_service
+from app.api.v1.endpoints.recommendations import invalidate_recs_cache
 
 router = APIRouter(prefix="/survey", tags=["survey"])
 
@@ -31,7 +32,9 @@ def submit_survey(
 ):
     """POST /survey — Save or update the user's onboarding survey answers."""
     try:
-        return survey_service.upsert_survey(db, current_user.id, payload)
+        result = survey_service.upsert_survey(db, current_user.id, payload)
+        invalidate_recs_cache(current_user.id)
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
@@ -42,4 +45,6 @@ def skip_survey(
     current_user: User = Depends(get_current_user),
 ):
     """POST /survey/skip — Skip the survey and proceed to dashboard."""
-    return survey_service.skip_survey(db, current_user.id)
+    result = survey_service.skip_survey(db, current_user.id)
+    invalidate_recs_cache(current_user.id)
+    return result

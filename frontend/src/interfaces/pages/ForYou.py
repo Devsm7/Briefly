@@ -485,17 +485,6 @@ def show_ai_brief():
         st.markdown(en_summary)
 
 
-if st.session_state.pop("_scroll_top", False):
-    components.html("""
-    <script>
-        var el = parent.document.querySelector('[data-testid="stAppViewContainer"]');
-        if (el) el.scrollTop = 0;
-        parent.window.scrollTo(0, 0);
-        parent.document.documentElement.scrollTop = 0;
-        parent.document.body.scrollTop = 0;
-    </script>
-    """, height=0)
-
 title_col, actions_col = st.columns([10, 2], vertical_alignment="center")
 
 with title_col:
@@ -611,3 +600,17 @@ else:
                     st.session_state.news_page = current_page + 1
                     st.session_state._scroll_top = True
                     st.rerun()
+
+# Scroll-to-top — runs AFTER all content is rendered so the DOM is ready
+if st.session_state.pop("_scroll_top", False):
+    components.html("""
+    <script>
+        setTimeout(function() {
+            var el = parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            if (el) el.scrollTop = 0;
+            parent.window.scrollTo(0, 0);
+            parent.document.documentElement.scrollTop = 0;
+            parent.document.body.scrollTop = 0;
+        }, 50);
+    </script>
+    """, height=0)

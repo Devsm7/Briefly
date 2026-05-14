@@ -1,0 +1,223 @@
+{
+  "tech": [
+    {
+      "label": "Artificial Intelligence",
+      "code": "artificial_intelligence"
+    },
+    {
+      "label": "Cybersecurity",
+      "code": "cybersecurity"
+    },
+    {
+      "label": "Cloud Computing",
+      "code": "cloud_computing"
+    },
+    {
+      "label": "Data Management",
+      "code": "data_management"
+    },
+    {
+      "label": "Technology Infrastructure",
+      "code": "technology_infrastructure"
+    }
+  ],
+  "sport": [
+    {
+      "label": "American Football",
+      "code": "american_football"
+    },
+    {
+      "label": "Basketball",
+      "code": "basketball"
+    },
+    {
+      "label": "Baseball",
+      "code": "baseball"
+    },
+    {
+      "label": "Soccer",
+      "code": "soccer"
+    },
+    {
+      "label": "Combat Sports",
+      "code": "combat_sports"
+    }
+  ],
+  "politics": [
+    {
+      "label": "Election Politics",
+      "code": "election_politics"
+    },
+    {
+      "label": "Executive Policy",
+      "code": "executive_policy"
+    },
+    {
+      "label": "Maritime Security",
+      "code": "maritime_security"
+    },
+    {
+      "label": "Cybersecurity",
+      "code": "cybersecurity"
+    },
+    {
+      "label": "Disability Rights",
+      "code": "disability_rights"
+    }
+  ],
+  "business": [
+    {
+      "label": "Earnings Reports",
+      "code": "earnings_reports"
+    },
+    {
+      "label": "Financial Markets",
+      "code": "financial_markets"
+    },
+    {
+      "label": "Company Performance",
+      "code": "company_performance"
+    },
+    {
+      "label": "Investment Strategies",
+      "code": "investment_strategies"
+    },
+    {
+      "label": "Industry Trends",
+      "code": "industry_trends"
+    }
+  ],
+  "world": [
+    {
+      "label": "Maritime Security",
+      "code": "maritime_security"
+    },
+    {
+      "label": "Global Health",
+      "code": "global_health"
+    },
+    {
+      "label": "Executive Policy",
+      "code": "executive_policy"
+    },
+    {
+      "label": "Middle East Affairs",
+      "code": "middle_east_affairs"
+    },
+    {
+      "label": "Economic Sanctions",
+      "code": "economic_sanctions"
+    }
+  ],
+  "other": [
+    {
+      "label": "Mathematical Research",
+      "code": "mathematical_research"
+    },
+    {
+      "label": "American Football",
+      "code": "american_football"
+    },
+    {
+      "label": "Genetic Research",
+      "code": "genetic_research"
+    },
+    {
+      "label": "Maritime History",
+      "code": "maritime_history"
+    },
+    {
+      "label": "Medical Technology",
+      "code": "medical_technology"
+    }
+  ],
+  "top": [],
+  "breaking": [
+    {
+      "label": "Sports Management",
+      "code": "sports_management"
+    },
+    {
+      "label": "Professional Football",
+      "code": "professional_football"
+    },
+    {
+      "label": "Video Game Industry",
+      "code": "video_game_industry"
+    },
+    {
+      "label": "Baseball",
+      "code": "baseball"
+    },
+    {
+      "label": "Social Welfare Policy",
+      "code": "social_welfare_policy"
+    }
+  ],
+  "tourism": [
+    {
+      "label": "Visa Policy",
+      "code": "visa_policy"
+    },
+    {
+      "label": "Tourist Incentives",
+      "code": "tourist_incentives"
+    },
+    {
+      "label": "Travel Restrictions",
+      "code": "travel_restrictions"
+    },
+    {
+      "label": "Pilgrimage Management",
+      "code": "pilgrimage_management"
+    },
+    {
+      "label": "Cultural Tourism",
+      "code": "cultural_tourism"
+    }
+  ],
+  "lifestyle": [
+    {
+      "label": "Art Exhibitions",
+      "code": "art_exhibitions"
+    },
+    {
+      "label": "Diplomatic Relations",
+      "code": "diplomatic_relations"
+    },
+    {
+      "label": "Religious Pilgrimages",
+      "code": "religious_pilgrimages"
+    },
+    {
+      "label": "Luxury Real Estate",
+      "code": "luxury_real_estate"
+    },
+    {
+      "label": "International Trade Events",
+      "code": "international_trade_events"
+    }
+  ],
+  "entertainment": [
+    {
+      "label": "Fashion and Beauty",
+      "code": "fashion_and_beauty"
+    },
+    {
+      "label": "Celebrity Culture",
+      "code": "celebrity_culture"
+    },
+    {
+      "label": "Creative Writing",
+      "code": "creative_writing"
+    },
+    {
+      "label": "Film Festivals",
+      "code": "film_festivals"
+    },
+    {
+      "label": "Sports Media",
+      "code": "sports_media"
+    }
+  ]
+}
