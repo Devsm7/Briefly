@@ -156,31 +156,13 @@ def get_recommendations(
             "pages": (total + per_page - 1) // per_page or 1,
         }
 
-    # Build user embedding: blend AI-generated interest base with user feedback signal
-    # base = interest description embedding (if available)
-    # feedback = mean(liked) − 0.3 × mean(disliked)
-    # final = 0.4 × base + 0.6 × feedback (feedback dominates as it is more personal)
-    interest_description = generate_user_interest_description(interest_vector)
-    base_emb = embedder.embed_text(interest_description) if interest_description else None
-
-    feedback_emb = np.mean(liked_embeddings, axis=0)
+    # Build user embedding: mean(liked) − 0.3 × mean(disliked), then normalize
+    user_emb = np.mean(liked_embeddings, axis=0)
     if disliked_embeddings:
-        feedback_emb = feedback_emb - 0.3 * np.mean(disliked_embeddings, axis=0)
-
-    if base_emb is not None:
-        base_arr = np.array(base_emb)
-        norm = np.linalg.norm(base_arr)
-        if norm > 0:
-            base_arr = base_arr / norm
-        user_emb = 0.4 * base_arr + 0.6 * feedback_emb
-    else:
-        user_emb = feedback_emb
-
+        user_emb = user_emb - 0.3 * np.mean(disliked_embeddings, axis=0)
     norm = np.linalg.norm(user_emb)
     if norm > 0:
         user_emb = user_emb / norm
-    else:
-        user_emb = None
 
     all_articles = db.query(News).filter(News.embedding != None, News.summary.isnot(None)).all()
     ranked = ranker.rank_articles(all_articles, user_emb.tolist(), interest_vector, top_k=1000, topic_keywords=topic_keywords)
