@@ -3,12 +3,18 @@
 > AI-driven news digest that learns your interests and delivers smart, summarized briefings. Supports English and Arabic content across Tech, Business, Politics, Sports, Health, Science, and more.
 
 ---
-##Platform Screenshots
-| Personalized News Feed | Display Article Content | AI Brief summary |
-|------|-------------|----------------|
-| <img width="836" height="471" alt="Screenshot 2026-05-20 at 21 14 45" src="https://github.com/user-attachments/assets/1421ee5c-6376-4c32-8244-75ef51d9ccbc" />
- | <img width="840" height="471" alt="Screenshot 2026-05-20 at 21 14 56" src="https://github.com/user-attachments/assets/ec0c33f6-5db8-4f26-a61f-5d2a07a7e07d" />
- | <img width="850" height="475" alt="Screenshot 2026-05-20 at 21 15 17" src="https://github.com/user-attachments/assets/fa1c166a-b01f-4cb6-927e-0c40124566ee" />|
+## Platform Screenshots
+|Personalized News Feed |
+|------|
+| <img width="836" height="471" alt="Screenshot 2026-05-20 at 21 14 45" src="https://github.com/user-attachments/assets/1421ee5c-6376-4c32-8244-75ef51d9ccbc" />|
+
+| Display Article Content |
+|------|
+| <img width="840" height="471" alt="Screenshot 2026-05-20 at 21 14 56" src="https://github.com/user-attachments/assets/ec0c33f6-5db8-4f26-a61f-5d2a07a7e07d" />|
+
+| AI Brief summary |
+|------|
+| <img width="850" height="475" alt="Screenshot 2026-05-20 at 21 15 17" src="https://github.com/user-attachments/assets/fa1c166a-b01f-4cb6-927e-0c40124566ee" />|
 ---
 ## Key Features
 
