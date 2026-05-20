@@ -1,17 +1,20 @@
 # Briefly — AI-Powered Personalized News Platform
 
-> AI-driven news digest that learns your interests and delivers smart, summarized briefings across Tech, Business, Politics, and Sports.
+> AI-driven news digest that learns your interests and delivers smart, summarized briefings. Supports English and Arabic content across Tech, Business, Politics, Sports, Health, Science, and more.
 
 ---
 
 ## Key Features
 
-- **Personalized feed** — cosine similarity ranking against your interest profile
-- **Onboarding survey** — 5-step questionnaire builds initial interest vector
-- **Feedback loop** — 👍/👎 and "More/Less like this" re-weights your profile
-- **RSS scraping** — 12 publishers across 4 categories, runs every 6 hours
-- **Daily AI digest** — LLM-generated bullet summaries via Ollama Mistral
+- **Personalized feed** — cosine similarity ranking against your interest profile (sentence-transformers `all-MiniLM-L6-v2`)
+- **Onboarding survey** — multi-step questionnaire with subtopics (e.g., AI, cybersecurity, cloud computing under Tech)
+- **Feedback loop** — 👍/👎 and "More/Less like this" re-weights your interest vector
+- **Dual news sources** — RSS feed scraping + Saudi Press Agency (SPA) API (English + Arabic)
+- **AI digests** — LLM-generated category summaries and overall briefing via Ollama (Mistral 7B)
 - **Saved library** — bookmark articles for later reading
+- **Keyword search** — semantic + title-matching hybrid search across all articles
+- **User profiles** — registration, login, personal interest dashboard
+- **Bilingual** — full Arabic content support (RTL, translated summaries)
 
 ---
 
@@ -20,15 +23,15 @@
 | Layer | Technology |
 |---|---|
 | Frontend | Streamlit |
-| Backend | FastAPI + 
- + Alembic |
+| Backend | FastAPI |
 | Database | PostgreSQL |
+| Migrations | Alembic |
 | Embeddings | sentence-transformers (`all-MiniLM-L6-v2`) |
 | LLM | Ollama (Mistral 7B) |
-| News Sources | RSS feeds via `feedparser` |
+| News Sources | RSS feeds + SPA API (`feedparser`, `requests`) |
 | Scheduling | APScheduler |
 | Auth | JWT (python-jose) + bcrypt |
-| Infrastructure | Docker Compose + Nginx |
+| Infrastructure | Docker Compose |
 
 ---
 
@@ -36,23 +39,42 @@
 
 ```
 Briefly/
-├── backend/          # FastAPI application
-│   └── app/
-│       ├── api/      # Route endpoints (auth, news, survey, recommendations…)
-│       ├── models/   # SQLAlchemy ORM models
-│       ├── schemas/  # Pydantic request/response schemas
-│       ├── services/ # Business logic layer
-│       ├── recommender/  # Embedder, InterestVector, Ranker
-│       ├── agents/   # Summarizer, DigestBuilder (LLM)
-│       ├── scraper/  # RSS fetcher, cleaner, deduplicator
-│       └── tasks/    # APScheduler background jobs
-├── frontend/         # Streamlit application
-│   └── src/
-│       └── interfaces/ # Streamlit pages and UI components
-├── infra/            # Nginx config, PostgreSQL init SQL
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/   # Route handlers (auth, news, survey, recommendations, interactions, translate, agent, users)
+│   │   ├── core/               # Config, security
+│   │   ├── db/                 # Session, base, init_db
+│   │   ├── models/             # SQLAlchemy ORM models (user, news, survey, interaction, save_article)
+│   │   ├── recommender/        # Embedder, InterestVector, Ranker, CategoryClassifier, Dedup
+│   │   ├── schemas/            # Pydantic request/response schemas
+│   │   ├── scraper/sources/    # RSS + SPA news fetchers
+│   │   ├── services/           # Business logic (auth, news, summarizer, survey, agent, content_enricher, database_service)
+│   │   └── tasks/              # APScheduler background jobs
+│   ├── alembic/versions/       # DB migration scripts
+│   └── scripts/                # Utility scripts (batch embedding, summarizing, backfills)
+├── frontend/src/interfaces/
+│   └── pages/                  # Streamlit pages (ForYou, article_details, log_in, sign_up, survey, saved_articles, profile)
+├── infra/                      # PostgreSQL init SQL, nginx config
 ├── docker-compose.yml
 └── Makefile
 ```
+
+---
+
+## News Categories
+
+`business`, `sport`, `politics`, `tech`, `health`, `science`, `entertainment`, `world`, `environment`, `food`, `tourism`
+
+## Survey Subtopics
+
+Each category includes granular subtopics surfaced via keyword matching:
+
+- **Tech** — Artificial Intelligence, Cybersecurity, Cloud Computing, Data Management, Technology Infrastructure
+- **Politics** — Election Politics, Executive Policy, Maritime Security, Disability Rights
+- **Sport** — American Football, Basketball, Baseball, Soccer, Combat Sports
+- **Business** — Earnings Reports, Financial Markets, Company Performance, Investment Strategies, Industry Trends
+- **Health** — Mental Health, Nutrition, Fitness, Medical Research, Public Health, Longevity
+- **Science** — Space, Physics, Biology, Climate, Tech Science, Archaeology
 
 ---
 
@@ -109,17 +131,18 @@ make migration name="add_column_foo"  # generate new migration
 make test-backend  # run pytest
 ```
 
-## Implementation Order
+---
 
-1. `backend/app/core/` — config, security
-2. `backend/app/db/` — session, base, init_db
-3. `backend/app/models/` — ORM tables
-4. `backend/app/schemas/` — Pydantic types
-5. `backend/app/services/` — business logic
-6. `backend/app/scraper/` — RSS pipeline
-7. `backend/app/recommender/` — embeddings + ranking
-8. `backend/app/agents/` — LLM summarization + digest
-9. `backend/app/api/` — route handlers
-10. `backend/app/tasks/` — APScheduler
-11. `backend/app/main.py` — wire everything together
-12. `frontend/src/interfaces/` — Streamlit pages and UI
+## Screenshots
+
+> [!NOTE]
+> Add your screenshots here. Recommended sizes: 1200×800px for full pages, 600×400px for components.
+
+<!--
+Examples:
+![For You Feed](screenshots/for-you-feed.png)
+![Article Detail](screenshots/article-detail.png)
+![Survey Page](screenshots/survey.png)
+![Saved Articles](screenshots/saved-articles.png)
+![Category Digests](screenshots/category-digests.png)
+-->
